@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
-import { ref, onMounted, watch } from "vue";
+import { ref } from "vue";
 
 type FieldType = 'text' | 'email' | 'number' | 'tel' | 'textarea' | 'select' | 'checkbox';
 
@@ -66,7 +66,6 @@ const formatPhoneNumber = (value: string): string => {
 const handlePhoneInput = (fieldName: string, event: Event): void => {
     const input = event.target as HTMLInputElement;
     const cursorPosition = input.selectionStart || 0;
-    const previousValue = (form[fieldName] as string) || '';
 
     // Eliminar todo excepto números del input
     const numbersOnly = input.value.replace(/\D/g, '');
