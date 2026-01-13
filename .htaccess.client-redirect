@@ -1,0 +1,45 @@
+# ============================================================================
+# REDIRECT PARA WEBINARS - Templet (Solución sin mod_proxy)
+# ============================================================================
+# 
+# INSTRUCCIONES DE INSTALACIÓN:
+# 1. Abrir el .htaccess existente del sitio del cliente
+# 2. Buscar la línea "# BEGIN WordPress"
+# 3. Copiar el bloque de abajo JUSTO ANTES de "# BEGIN WordPress"
+# 4. NO reemplazar el .htaccess completo, solo AGREGAR estas líneas
+#
+# IMPORTANTE: Esta solución usa REDIRECT en lugar de PROXY porque
+# mod_proxy no está disponible en Hostinger. Pasa el host original
+# como header para que Laravel detecte el cliente correctamente.
+# ============================================================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Redirigir solo /webinars/* a la aplicación Laravel
+    # Pasar el host original como header personalizado
+    # 
+    # Flags:
+    #   E = Environment (establece variable de entorno)
+    #   R = Redirect (redirige al usuario)
+    #   L = Last (detiene procesamiento si coincide)
+    #   QSA = Query String Append (preserva parámetros UTM)
+    
+    RewriteCond %{REQUEST_URI} ^/webinars/
+    RewriteRule ^webinars/(.*)$ https://webinars.templet.io/webinars/$1?original_host=%{HTTP_HOST} [R=302,L,QSA]
+</IfModule>
+
+# ============================================================================
+# NOTAS TÉCNICAS:
+# ============================================================================
+# - El usuario verá: https://webinars.templet.io/webinars/mi-webinar
+# - El parámetro ?original_host=escala.templet.io permite detectar el cliente
+# - Laravel lee este parámetro y detecta que el cliente es "escala"
+# - QSA preserva UTMs: ?utm_source=facebook&utm_campaign=2024
+# - Compatible con LiteSpeed Cache
+# - NO requiere mod_proxy (funciona en cualquier hosting)
+# 
+# DESVENTAJA:
+# - La URL cambia en el navegador de escala.templet.io a webinars.templet.io
+# - Esto es una limitación de no tener mod_proxy disponible
+# ============================================================================

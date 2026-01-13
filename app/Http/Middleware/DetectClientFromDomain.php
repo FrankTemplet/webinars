@@ -19,6 +19,21 @@ class DetectClientFromDomain
     {
         $host = $request->getHost();
         
+        // Primero, intentar obtener el host original de un header personalizado
+        // (usado cuando el .htaccess hace redirect en lugar de proxy)
+        $originalHost = $request->header('X-Original-Host');
+        if ($originalHost) {
+            $host = $originalHost;
+            Log::info("Using X-Original-Host header", ['host' => $host]);
+        }
+        
+        // Si no hay header, intentar obtener de query string
+        // (usado cuando .htaccess pasa ?original_host=escala.templet.io)
+        if (!$originalHost && $request->has('original_host')) {
+            $host = $request->get('original_host');
+            Log::info("Using original_host query parameter", ['host' => $host]);
+        }
+        
         // Extraer subdominio (escala.templet.io → escala)
         $parts = explode('.', $host);
         $subdomain = $parts[0];
@@ -38,7 +53,8 @@ class DetectClientFromDomain
                 Log::info("Client detected from subdomain", [
                     'subdomain' => $subdomain,
                     'client_id' => $client->id,
-                    'client_name' => $client->name
+                    'client_name' => $client->name,
+                    'original_host' => $originalHost ?? 'N/A'
                 ]);
             }
         }
