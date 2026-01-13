@@ -7,45 +7,43 @@ Route::get('/', function () {
     return redirect('/admin');
 });
 
-
 /*
 |--------------------------------------------------------------------------
-| PRODUCCIÓN
-| Subdominio dinámico: {client}.templet.io
+| PRODUCCIÓN - Subdominios de Clientes
 |--------------------------------------------------------------------------
 |
-| Ejemplo válido:
-|   - empresa1.templet.io/webinars/mi-webinar
-|   - empresa2.templet.io/webinars/lanzamiento
+| Rutas para webinars accesibles desde subdominios de clientes:
+|   - escala.templet.io/webinars/mi-webinar
+|   - libertynet.templet.io/webinars/lanzamiento
 |
-| Nota:
-| Laravel SOLO soporta un subdominio dinámico con dominio base fijo.
-| No soporta {client}.{domain} o wildcard de dominios.
+| El middleware DetectClientFromDomain detecta automáticamente el cliente
+| basándose en el subdominio.
+|
+| IMPORTANTE: Cada cliente debe tener configurado en su sitio web un
+| .htaccess que redirija /webinars/* a esta aplicación Laravel.
 |
 */
 
-Route::domain('{client}.templet.io')->group(function () {
+Route::middleware(['web', \App\Http\Middleware\DetectClientFromDomain::class])
+    ->group(function () {
+        Route::get('/webinars/{slug}', [WebinarController::class, 'show'])
+            ->name('webinar.show');
 
-    Route::get('/webinars/{slug}', [WebinarController::class, 'show'])
-        ->name('webinar.show');
-
-    Route::post('/webinars/{slug}', [WebinarController::class, 'store'])
-        ->name('webinar.store');
-});
+        Route::post('/webinars/{slug}', [WebinarController::class, 'store'])
+            ->name('webinar.store');
+    });
 
 /*
 |--------------------------------------------------------------------------
-| DESARROLLO LOCAL (fallback sin subdominios)
+| DESARROLLO LOCAL (fallback)
 |--------------------------------------------------------------------------
 |
 | Permite usar rutas sin configurar subdominios:
-|
-|   http://localhost:8000/client/empresa1/webinars/mi-webinar
+|   http://localhost:8000/client/escala/webinars/mi-webinar
 |
 */
 
 Route::prefix('client/{client}')->group(function () {
-
     Route::get('/webinars/{slug}', [WebinarController::class, 'show'])
         ->name('webinar.show.local');
 

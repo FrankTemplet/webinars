@@ -2,11 +2,18 @@
 import { Head } from '@inertiajs/vue3';
 import DynamicForm from '@/components/DynamicForm.vue';
 import { route } from 'ziggy-js';
+import { computed } from 'vue';
+
+interface SocialMediaLink {
+    type: string;
+    url: string;
+}
 
 interface Client {
     slug: string;
     name: string;
     logo?: string;
+    social_media?: SocialMediaLink[];
 }
 
 interface FormField {
@@ -43,6 +50,23 @@ const submitUrl = route('webinar.store.local', {
     client: props.client.slug,
     slug: props.webinar.slug
 });
+
+const socialLinks = computed(() => {
+    return props.client.social_media || (props.client as any).socialMedia || [];
+});
+
+const getSocialIcon = (type: string) => {
+    const icons: Record<string, string> = {
+        facebook: 'fa-brands fa-facebook-f',
+        instagram: 'fa-brands fa-instagram',
+        linkedin: 'fa-brands fa-linkedin-in',
+        twitter: 'fa-brands fa-x-twitter',
+        youtube: 'fa-brands fa-youtube',
+        tiktok: 'fa-brands fa-tiktok',
+        website: 'fa-solid fa-globe'
+    };
+    return icons[type.toLowerCase()] || 'fa-solid fa-globe';
+};
 </script>
 
 <template>
@@ -90,9 +114,15 @@ const submitUrl = route('webinar.store.local', {
                             <footer class="mt-8 md:mt-12 mb-8">
                                 <div class="block mt-3">
                                     <p class="text-[12px] mb-2 text-[#656668]">Síguenos:</p>
-                                    <div class="flex mb-4">
-                                        <!-- Social Icons (Placeholder SVG or props) -->
-                                        <!-- Assuming these might be part of client settings later, for now we keep layout space -->
+                                    <div class="flex mb-4" v-if="socialLinks.length">
+                                        <a v-for="link in socialLinks"
+                                           :key="link.type"
+                                           :href="link.url"
+                                           target="_blank"
+                                           class="mr-4 text-[#656668] hover:text-[#00B0D3] transition-all text-xl"
+                                           :title="link.type">
+                                            <i :class="getSocialIcon(link.type)"></i>
+                                        </a>
                                     </div>
                                     <p class="text-[12px] text-[#656668] mb-1 mt-3 xl:mt-5">
                                         Copyright © | {{ new Date().getFullYear() }} {{ client.name }} | All rights reserved.

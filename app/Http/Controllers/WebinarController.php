@@ -10,9 +10,27 @@ use Inertia\Inertia;
 
 class WebinarController extends Controller
 {
-    public function show(Request $request, $clientSlug, $webinarSlug)
+    public function show(Request $request, $webinarSlug)
     {
-        $client = Client::where('slug', $clientSlug)->firstOrFail();
+        // Obtener cliente del middleware (inyectado en request attributes)
+        $client = $request->attributes->get('client');
+        
+        // Si no hay cliente detectado, intentar obtener del parámetro de ruta (desarrollo local)
+        if (!$client && $request->route('client')) {
+            $clientSlug = $request->route('client');
+            $client = Client::with('socialMedia')->where('slug', $clientSlug)->firstOrFail();
+        }
+        
+        // Si aún no hay cliente, error 404
+        if (!$client) {
+            abort(404, 'Cliente no encontrado. Verifica que el subdominio sea correcto.');
+        }
+        
+        // Cargar relaciones si no están cargadas
+        if (!$client->relationLoaded('socialMedia')) {
+            $client->load('socialMedia');
+        }
+        
         $webinar = Webinar::where('client_id', $client->id)
             ->where('slug', $webinarSlug)
             ->firstOrFail();
@@ -23,9 +41,22 @@ class WebinarController extends Controller
         ]);
     }
 
-    public function store(Request $request, $clientSlug, $webinarSlug)
+    public function store(Request $request, $webinarSlug)
     {
-        $client = Client::where('slug', $clientSlug)->firstOrFail();
+        // Obtener cliente del middleware (inyectado en request attributes)
+        $client = $request->attributes->get('client');
+        
+        // Si no hay cliente detectado, intentar obtener del parámetro de ruta (desarrollo local)
+        if (!$client && $request->route('client')) {
+            $clientSlug = $request->route('client');
+            $client = Client::with('socialMedia')->where('slug', $clientSlug)->firstOrFail();
+        }
+        
+        // Si aún no hay cliente, error 404
+        if (!$client) {
+            abort(404, 'Cliente no encontrado. Verifica que el subdominio sea correcto.');
+        }
+        
         $webinar = Webinar::where('client_id', $client->id)
             ->where('slug', $webinarSlug)
             ->firstOrFail();
