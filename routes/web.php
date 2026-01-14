@@ -43,7 +43,7 @@ Route::middleware(['web', \App\Http\Middleware\DetectClientFromDomain::class])
 |
 */
 
-Route::prefix('client/{client}')->group(function () {
+Route::prefix('{client}')->group(function () {
     Route::get('/webinars/{slug}', [WebinarController::class, 'show'])
         ->name('webinar.show.local');
 
