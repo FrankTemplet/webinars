@@ -112,10 +112,18 @@ class WebinarController extends Controller
             }
         }
 
-        Submission::create(array_merge([
+        $submission = Submission::create(array_merge([
             'webinar_id' => $webinar->id,
             'data' => $submissionData,
         ], $utmData));
+
+        // Register in Zoom if applicable
+        if ($webinar->zoom_webinar_id) {
+            app(\App\Services\ZoomService::class)->registerRegistrant(
+                $webinar->zoom_webinar_id,
+                $submissionData
+            );
+        }
 
         return back()->with('success', 'Gracias! Sus datos han sido ingresados con éxito.');
     }

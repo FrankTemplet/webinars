@@ -34,6 +34,34 @@ class WebinarForm
                 TextInput::make('slug')
                     ->required()
                     ->maxLength(255),
+                Select::make('zoom_webinar_id')
+                    ->label('Zoom Webinar')
+                    ->helperText('Select the webinar from Zoom to enable automatic registration.')
+                    ->options(fn () => app(\App\Services\ZoomService::class)->listWebinars())
+                    ->searchable()
+                    ->nullable()
+                    ->live()
+                    ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                        if ($state) {
+                            $schema = $get('form_schema') ?? [];
+                            $names = array_column($schema, 'name');
+                            
+                            $toAdd = [];
+                            if (!in_array('email', $names)) {
+                                $toAdd[] = ['type' => 'email', 'label' => 'Email', 'name' => 'email', 'required' => true];
+                            }
+                            if (!in_array('first_name', $names) && !in_array('nombre', $names)) {
+                                $toAdd[] = ['type' => 'text', 'label' => 'Nombre', 'name' => 'first_name', 'required' => true];
+                            }
+                            if (!in_array('last_name', $names) && !in_array('apellido', $names)) {
+                                $toAdd[] = ['type' => 'text', 'label' => 'Apellido', 'name' => 'last_name', 'required' => true];
+                            }
+                            
+                            if (!empty($toAdd)) {
+                                $set('form_schema', array_merge($schema, $toAdd));
+                            }
+                        }
+                    }),
                 Textarea::make('description')
                     ->columnSpanFull(),
                 FileUpload::make('hero_image')

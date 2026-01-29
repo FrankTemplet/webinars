@@ -44,9 +44,9 @@ Route::middleware(['web', \App\Http\Middleware\DetectClientFromDomain::class])
 */
 
 Route::prefix('{client}')->group(function () {
-    Route::get('/webinars/{slug}', [WebinarController::class, 'show'])
+    Route::get('/{slug}', [WebinarController::class, 'show'])
         ->name('webinar.show.local');
 
-    Route::post('/webinars/{slug}', [WebinarController::class, 'store'])
+    Route::post('/{slug}', [WebinarController::class, 'store'])
         ->name('webinar.store.local');
 });
