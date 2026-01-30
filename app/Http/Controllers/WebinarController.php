@@ -125,6 +125,31 @@ class WebinarController extends Controller
             );
         }
 
+        // Send Meta Conversions API event if configured
+        $eventId = $request->input('event_id');
+        if ($eventId && $webinar->tracking_scripts) {
+            $metaService = app(\App\Services\MetaConversionsService::class);
+            
+            foreach ($webinar->tracking_scripts as $script) {
+                if (
+                    ($script['platform'] ?? '') === 'facebook' &&
+                    ($script['enabled'] ?? false) &&
+                    !empty($script['pixel_id']) &&
+                    !empty($script['access_token'])
+                ) {
+                    $metaService->sendCompleteRegistration(
+                        $script['pixel_id'],
+                        $script['access_token'],
+                        $eventId,
+                        $submissionData,
+                        $request->headers->get('referer'),
+                        $request->ip(),
+                        $request->userAgent()
+                    );
+                }
+            }
+        }
+
         return back()->with('success', 'Gracias! Sus datos han sido ingresados con éxito.');
     }
 }

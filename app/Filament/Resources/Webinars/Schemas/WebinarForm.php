@@ -36,7 +36,7 @@ class WebinarForm
                     ->maxLength(255),
                 Select::make('zoom_webinar_id')
                     ->label('Zoom Webinar')
-                    ->helperText('Select the webinar from Zoom to enable automatic registration.')
+                    ->helperText("Choose the webinar from Zoom to enable automatic registration.")
                     ->options(fn () => app(\App\Services\ZoomService::class)->listWebinars())
                     ->searchable()
                     ->nullable()
@@ -45,7 +45,7 @@ class WebinarForm
                         if ($state) {
                             $schema = $get('form_schema') ?? [];
                             $names = array_column($schema, 'name');
-                            
+
                             $toAdd = [];
                             if (!in_array('email', $names)) {
                                 $toAdd[] = ['type' => 'email', 'label' => 'Email', 'name' => 'email', 'required' => true];
@@ -56,7 +56,7 @@ class WebinarForm
                             if (!in_array('last_name', $names) && !in_array('apellido', $names)) {
                                 $toAdd[] = ['type' => 'text', 'label' => 'Apellido', 'name' => 'last_name', 'required' => true];
                             }
-                            
+
                             if (!empty($toAdd)) {
                                 $set('form_schema', array_merge($schema, $toAdd));
                             }
@@ -91,6 +91,11 @@ class WebinarForm
                                     ->visible(fn (Get $get) => $get('platform') === 'facebook')
                                     ->required()
                                     ->helperText('Your Facebook Pixel ID (e.g., 358413517177753)'),
+                                TextInput::make('access_token')
+                                    ->label('Conversions API Access Token')
+                                    ->visible(fn (Get $get) => $get('platform') === 'facebook')
+                                    ->password()
+                                    ->helperText('Optional. Get from Meta Events Manager → Settings → Generate Access Token. Required for server-side tracking.'),
                                 TextInput::make('partner_id')
                                     ->label('Partner ID')
                                     ->visible(fn (Get $get) => $get('platform') === 'linkedin')
