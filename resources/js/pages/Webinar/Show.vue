@@ -3,13 +3,14 @@ import { Head } from '@inertiajs/vue3';
 import DynamicForm from '@/components/DynamicForm.vue';
 import { route } from 'ziggy-js';
 import { computed, onMounted } from 'vue';
+import { generateUUID } from '@/lib/utils';
 
 // Declare global window properties for tracking scripts
 declare global {
     interface Window {
-        fbq?: any;
+        fbq?: (action: string, event: string, params?: any, options?: { eventID?: string }) => void;
         _fbq?: any;
-        lintrk?: any;
+        lintrk?: (action: string, params?: any) => void;
         _linkedin_partner_id?: string;
         _linkedin_data_partner_ids?: string[];
     }
@@ -104,17 +105,25 @@ onMounted(() => {
     // Inject Facebook Pixel
     if (facebookPixel.value && facebookPixel.value.pixel_id) {
         if (!window.fbq) {
-            (function(f,b,e,v,n,t,s)
-            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-            n.queue=[];t=b.createElement(e);t.async=!0;
-            t.src=v;s=b.getElementsByTagName(e)[0];
-            if (s && s.parentNode) s.parentNode.insertBefore(t,s)}(window, document,'script',
-            'https://connect.facebook.net/en_US/fbevents.js'));
-            
-            window.fbq('init', facebookPixel.value.pixel_id);
-            window.fbq('track', 'PageView');
+            (function(f: any, b: Document, e: string, v: string, n?: any, t?: any, s?: any) {
+                if (f.fbq) return;
+                n = f.fbq = function() {
+                    // eslint-disable-next-line @typescript-eslint/no-unused-expressions,prefer-spread,prefer-rest-params
+                    n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+                };
+                if (!f._fbq) f._fbq = n;
+                n.push = n; n.loaded = !0; n.version = '2.0';
+                n.queue = [];
+                t = b.createElement(e); t.async = !0;
+                t.src = v;
+                s = b.getElementsByTagName(e)[0];
+                if (s && s.parentNode) s.parentNode.insertBefore(t, s);
+            })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+
+            const pageViewEventId = generateUUID();
+            (window as any).fbq?.('init', facebookPixel.value.pixel_id);
+            (window as any).fbq?.('track', 'PageView', {}, { eventID: pageViewEventId });
+            console.log(`Facebook Pixel: PageView event triggered with eventID: ${pageViewEventId}`);
         }
     }
 
@@ -125,14 +134,20 @@ onMounted(() => {
             window._linkedin_data_partner_ids = window._linkedin_data_partner_ids || [];
             window._linkedin_data_partner_ids.push(window._linkedin_partner_id);
 
-            (function(l) {
-                if (!l){window.lintrk = function(a,b){window.lintrk.q.push([a,b])};
-                window.lintrk.q=[]}
-                var s = document.getElementsByTagName('script')[0];
-                var b = document.createElement('script');
-                b.type = 'text/javascript';b.async = true;
+            (function(l: any) {
+                if (!l) {
+                    window.lintrk = function(a: string, b: any) {
+                        (window.lintrk as any).q.push([a, b]);
+                    };
+                    (window.lintrk as any).q = [];
+                }
+
+                const s = document.getElementsByTagName('script')[0];
+                const b = document.createElement('script');
+                b.type = 'text/javascript'; b.async = true;
                 b.src = 'https://snap.licdn.com/li.lms-analytics/insight.min.js';
-                if (s && s.parentNode) s.parentNode.insertBefore(b, s);})(window.lintrk);
+                if (s && s.parentNode) s.parentNode.insertBefore(b, s);
+            })(window.lintrk);
         }
     }
 });
@@ -142,10 +157,10 @@ onMounted(() => {
     <Head :title="webinar.meta_title || webinar.title">
         <meta name="description" :content="webinar.meta_description || webinar.description" />
         <link rel="icon" type="image/x-icon" :href="`/storage/${client.logo}`" v-if="client.logo">
-        
+
         <!-- Noscript fallbacks are still good in the head -->
         <noscript v-if="facebookPixel">
-            <img height="1" width="1" style="display:none"
+            <img alt="pixel" height="1" width="1" style="display:none"
             :src="`https://www.facebook.com/tr?id=${facebookPixel.pixel_id}&ev=PageView&noscript=1`"/>
         </noscript>
         <noscript v-if="linkedinPixel">

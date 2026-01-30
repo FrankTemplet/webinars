@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useForm } from '@inertiajs/vue3';
 import { ref } from "vue";
+import { generateUUID } from '@/lib/utils';
 
 // Declare global window properties for tracking scripts
 declare global {
     interface Window {
-        fbq?: (action: string, event: string, params?: any) => void;
+        fbq?: (action: string, event: string, params?: any, options?: { eventID?: string }) => void;
         lintrk?: (action: string, params?: any) => void;
     }
 }
@@ -127,10 +128,10 @@ const handlePhoneInput = (fieldName: string, event: Event): void => {
 };
 
 // Helper function to trigger Facebook Pixel conversion event
-const triggerFacebookConversion = (): void => {
+const triggerFacebookConversion = (eventId: string): void => {
     if (typeof window.fbq === 'function') {
-        window.fbq('track', 'CompleteRegistration');
-        console.log('Facebook Pixel: CompleteRegistration event triggered');
+        window.fbq('track', 'CompleteRegistration', {}, { eventID: eventId });
+        console.log(`Facebook Pixel: CompleteRegistration event triggered with eventID: ${eventId}`);
     } else {
         console.warn('Facebook Pixel not loaded');
     }
@@ -147,7 +148,7 @@ const triggerLinkedInConversion = (conversionId: string): void => {
 };
 
 // Trigger all enabled tracking events
-const triggerTrackingEvents = (): void => {
+const triggerTrackingEvents = (eventId: string): void => {
     if (!props.trackingScripts || props.trackingScripts.length === 0) {
         return;
     }
@@ -156,7 +157,7 @@ const triggerTrackingEvents = (): void => {
         if (!script.enabled) return;
 
         if (script.platform === 'facebook' && script.pixel_id) {
-            triggerFacebookConversion();
+            triggerFacebookConversion(eventId);
         } else if (script.platform === 'linkedin' && script.conversion_id) {
             triggerLinkedInConversion(script.conversion_id);
         }
@@ -164,11 +165,17 @@ const triggerTrackingEvents = (): void => {
 };
 
 const submit = (): void => {
+    // Generate a unique event ID for de-duplication (CAPI)
+    const eventId = generateUUID();
+
+    // Add event_id to the form before sending to server
+    form.event_id = eventId;
+
     form.post(props.submitUrl, {
         preserveScroll: true,
         onSuccess: () => {
             // Trigger tracking events on successful submission
-            triggerTrackingEvents();
+            triggerTrackingEvents(eventId);
             // Reset form
             form.reset();
         },
