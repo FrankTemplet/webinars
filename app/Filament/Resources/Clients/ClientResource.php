@@ -22,6 +22,11 @@ class ClientResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'Client';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->user()->isAdmin();
+    }
+
     public static function form(Schema $schema): Schema
     {
         return ClientForm::configure($schema);

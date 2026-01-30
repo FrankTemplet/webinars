@@ -22,6 +22,11 @@ class WebinarResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'Webinar';
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return auth()->user()->isAdmin();
+    }
+
     public static function form(Schema $schema): Schema
     {
         return WebinarForm::configure($schema);
