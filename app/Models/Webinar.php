@@ -13,6 +13,7 @@ class Webinar extends Model
 
     protected $casts = [
         'form_schema' => 'array',
+        'tracking_scripts' => 'array',
     ];
 
     public function client()

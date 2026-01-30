@@ -2,7 +2,18 @@
 import { Head } from '@inertiajs/vue3';
 import DynamicForm from '@/components/DynamicForm.vue';
 import { route } from 'ziggy-js';
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
+
+// Declare global window properties for tracking scripts
+declare global {
+    interface Window {
+        fbq?: any;
+        _fbq?: any;
+        lintrk?: any;
+        _linkedin_partner_id?: string;
+        _linkedin_data_partner_ids?: string[];
+    }
+}
 
 interface SocialMediaLink {
     type: string;
@@ -17,12 +28,18 @@ interface Client {
 }
 
 interface FormField {
-    // Define según la estructura de tu schema
     type: any;
     name: string;
     label: string;
     required?: boolean;
-    // Añade más propiedades según necesites
+}
+
+interface TrackingScript {
+    platform: 'facebook' | 'linkedin';
+    pixel_id?: string;
+    partner_id?: string;
+    conversion_id?: string;
+    enabled: boolean;
 }
 
 interface Webinar {
@@ -35,6 +52,7 @@ interface Webinar {
     header_logo?: string;
     hero_image?: string;
     form_schema?: FormField[];
+    tracking_scripts?: TrackingScript[];
 }
 
 interface Props {
@@ -45,7 +63,6 @@ interface Props {
 const props = defineProps<Props>();
 
 // Construct the submit URL
-// Assuming the client slug is part of the request context handled by Laravel routes
 const submitUrl = route('webinar.store.local', {
     client: props.client.slug,
     slug: props.webinar.slug
@@ -67,12 +84,74 @@ const getSocialIcon = (type: string) => {
     };
     return icons[type.toLowerCase()] || 'fa-solid fa-globe';
 };
+
+// Get enabled tracking scripts
+const enabledTrackingScripts = computed(() => {
+    return (props.webinar.tracking_scripts || []).filter(script => script.enabled);
+});
+
+// Get Facebook Pixel configuration
+const facebookPixel = computed(() => {
+    return enabledTrackingScripts.value.find(script => script.platform === 'facebook');
+});
+
+// Get LinkedIn Insight Tag configuration
+const linkedinPixel = computed(() => {
+    return enabledTrackingScripts.value.find(script => script.platform === 'linkedin');
+});
+
+onMounted(() => {
+    // Inject Facebook Pixel
+    if (facebookPixel.value && facebookPixel.value.pixel_id) {
+        if (!window.fbq) {
+            (function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            if (s && s.parentNode) s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js'));
+            
+            window.fbq('init', facebookPixel.value.pixel_id);
+            window.fbq('track', 'PageView');
+        }
+    }
+
+    // Inject LinkedIn Insight Tag
+    if (linkedinPixel.value && linkedinPixel.value.partner_id) {
+        if (!window.lintrk) {
+            window._linkedin_partner_id = linkedinPixel.value.partner_id;
+            window._linkedin_data_partner_ids = window._linkedin_data_partner_ids || [];
+            window._linkedin_data_partner_ids.push(window._linkedin_partner_id);
+
+            (function(l) {
+                if (!l){window.lintrk = function(a,b){window.lintrk.q.push([a,b])};
+                window.lintrk.q=[]}
+                var s = document.getElementsByTagName('script')[0];
+                var b = document.createElement('script');
+                b.type = 'text/javascript';b.async = true;
+                b.src = 'https://snap.licdn.com/li.lms-analytics/insight.min.js';
+                if (s && s.parentNode) s.parentNode.insertBefore(b, s);})(window.lintrk);
+        }
+    }
+});
 </script>
 
 <template>
     <Head :title="webinar.meta_title || webinar.title">
         <meta name="description" :content="webinar.meta_description || webinar.description" />
         <link rel="icon" type="image/x-icon" :href="`/storage/${client.logo}`" v-if="client.logo">
+        
+        <!-- Noscript fallbacks are still good in the head -->
+        <noscript v-if="facebookPixel">
+            <img height="1" width="1" style="display:none"
+            :src="`https://www.facebook.com/tr?id=${facebookPixel.pixel_id}&ev=PageView&noscript=1`"/>
+        </noscript>
+        <noscript v-if="linkedinPixel">
+            <img height="1" width="1" style="display:none" alt=""
+            :src="`https://px.ads.linkedin.com/collect/?pid=${linkedinPixel.partner_id}&fmt=gif`" />
+        </noscript>
     </Head>
 
     <!-- Global Font Fix -->
@@ -105,6 +184,7 @@ const getSocialIcon = (type: string) => {
                                     v-if="webinar.form_schema && webinar.form_schema.length"
                                     :schema="webinar.form_schema"
                                     :submit-url="submitUrl"
+                                    :tracking-scripts="enabledTrackingScripts"
                                 />
                                 <div v-else class="text-center text-gray-500 py-4">
                                     Formulario no disponible.

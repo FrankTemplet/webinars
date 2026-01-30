@@ -2,6 +2,15 @@
 import { useForm } from '@inertiajs/vue3';
 import { ref } from "vue";
 
+// Declare global window properties for tracking scripts
+declare global {
+    interface Window {
+        fbq?: (action: string, event: string, params?: any) => void;
+        lintrk?: (action: string, params?: any) => void;
+    }
+}
+
+
 type FieldType = 'text' | 'email' | 'number' | 'tel' | 'textarea' | 'select' | 'checkbox';
 
 interface FormField {
@@ -12,9 +21,18 @@ interface FormField {
     options?: string[];
 }
 
+interface TrackingScript {
+    platform: 'facebook' | 'linkedin';
+    pixel_id?: string;
+    partner_id?: string;
+    conversion_id?: string;
+    enabled: boolean;
+}
+
 interface Props {
     schema: FormField[];
     submitUrl: string;
+    trackingScripts?: TrackingScript[];
 }
 
 interface FormData {
@@ -108,10 +126,52 @@ const handlePhoneInput = (fieldName: string, event: Event): void => {
     }, 0);
 };
 
+// Helper function to trigger Facebook Pixel conversion event
+const triggerFacebookConversion = (): void => {
+    if (typeof window.fbq === 'function') {
+        window.fbq('track', 'CompleteRegistration');
+        console.log('Facebook Pixel: CompleteRegistration event triggered');
+    } else {
+        console.warn('Facebook Pixel not loaded');
+    }
+};
+
+// Helper function to trigger LinkedIn conversion event
+const triggerLinkedInConversion = (conversionId: string): void => {
+    if (typeof window.lintrk === 'function') {
+        window.lintrk('track', { conversion_id: parseInt(conversionId) });
+        console.log(`LinkedIn Insight Tag: Conversion ${conversionId} triggered`);
+    } else {
+        console.warn('LinkedIn Insight Tag not loaded');
+    }
+};
+
+// Trigger all enabled tracking events
+const triggerTrackingEvents = (): void => {
+    if (!props.trackingScripts || props.trackingScripts.length === 0) {
+        return;
+    }
+
+    props.trackingScripts.forEach(script => {
+        if (!script.enabled) return;
+
+        if (script.platform === 'facebook' && script.pixel_id) {
+            triggerFacebookConversion();
+        } else if (script.platform === 'linkedin' && script.conversion_id) {
+            triggerLinkedInConversion(script.conversion_id);
+        }
+    });
+};
+
 const submit = (): void => {
     form.post(props.submitUrl, {
         preserveScroll: true,
-        onSuccess: () => form.reset(),
+        onSuccess: () => {
+            // Trigger tracking events on successful submission
+            triggerTrackingEvents();
+            // Reset form
+            form.reset();
+        },
     });
 };
 </script>

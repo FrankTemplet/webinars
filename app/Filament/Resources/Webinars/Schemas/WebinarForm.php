@@ -74,10 +74,44 @@ class WebinarForm
                     ->disk('public')
                     ->directory('webinars/logos')
                     ->columnSpanFull(),
-                Textarea::make('tracking_scripts')
-                    ->columnSpanFull(),
-                TextInput::make('meta_title'),
-                Textarea::make('meta_description'),
+                Section::make('Tracking Scripts')
+                    ->description('Configure tracking pixels for this webinar (Facebook, LinkedIn, etc.)')
+                    ->schema([
+                        Repeater::make('tracking_scripts')
+                            ->schema([
+                                Select::make('platform')
+                                    ->options([
+                                        'facebook' => 'Facebook Pixel',
+                                        'linkedin' => 'LinkedIn Insight Tag',
+                                    ])
+                                    ->required()
+                                    ->live(),
+                                TextInput::make('pixel_id')
+                                    ->label('Pixel ID')
+                                    ->visible(fn (Get $get) => $get('platform') === 'facebook')
+                                    ->required()
+                                    ->helperText('Your Facebook Pixel ID (e.g., 358413517177753)'),
+                                TextInput::make('partner_id')
+                                    ->label('Partner ID')
+                                    ->visible(fn (Get $get) => $get('platform') === 'linkedin')
+                                    ->required()
+                                    ->helperText('Your LinkedIn Partner ID'),
+                                TextInput::make('conversion_id')
+                                    ->label('Conversion ID')
+                                    ->visible(fn (Get $get) => $get('platform') === 'linkedin')
+                                    ->required()
+                                    ->helperText('Your LinkedIn Conversion ID (e.g., 25868049)'),
+                                Toggle::make('enabled')
+                                    ->label('Enable Tracking')
+                                    ->default(true),
+                            ])
+                            ->columnSpanFull()
+                            ->defaultItems(0)
+                            ->addActionLabel('Add Tracking Pixel')
+                            ->collapsible(),
+                    ])
+                    ->columnSpanFull()
+                    ->collapsible(),
                 Section::make('Form Builder')
                     ->schema([
                         Repeater::make('form_schema')
