@@ -14,10 +14,12 @@ class Submission extends Model
         'utm_campaign',
         'utm_term',
         'utm_content',
+        'sent_to_clay_at',
     ];
 
     protected $casts = [
         'data' => 'array',
+        'sent_to_clay_at' => 'datetime',
     ];
 
     public function webinar()

@@ -32,6 +32,13 @@ class SubmissionsTable
                 ],
                 static::getDynamicColumns(),
                 [
+                    TextColumn::make('sent_to_clay_at')
+                        ->label('Enviado a Clay')
+                        ->dateTime()
+                        ->sortable()
+                        ->badge()
+                        ->color(fn ($state) => $state ? 'success' : 'gray')
+                        ->formatStateUsing(fn ($state) => $state ? 'Enviado' : 'Pendiente'),
                     TextColumn::make('utm_source')
                         ->searchable()
                         ->toggleable(isToggledHiddenByDefault: true),
@@ -84,6 +91,7 @@ class SubmissionsTable
                 EditAction::make(),
             ])
             ->headerActions([
+                \App\Filament\Resources\Submissions\Actions\SendToClayBulkAction::make(),
                 \pxlrbt\FilamentExcel\Actions\Tables\ExportAction::make()
                     ->exports([
                         \pxlrbt\FilamentExcel\Exports\ExcelExport::make()
@@ -137,6 +145,7 @@ class SubmissionsTable
         }
 
         return array_merge($columns, [
+            \pxlrbt\FilamentExcel\Columns\Column::make('sent_to_clay_at')->heading('Enviado a Clay'),
             \pxlrbt\FilamentExcel\Columns\Column::make('utm_source')->heading('UTM Source'),
             \pxlrbt\FilamentExcel\Columns\Column::make('utm_medium')->heading('UTM Medium'),
             \pxlrbt\FilamentExcel\Columns\Column::make('utm_campaign')->heading('UTM Campaign'),
