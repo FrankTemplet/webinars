@@ -107,9 +107,9 @@ onMounted(() => {
         if (!window.fbq) {
             (function(f: any, b: Document, e: string, v: string, n?: any, t?: any, s?: any) {
                 if (f.fbq) return;
-                n = f.fbq = function() {
-                    // eslint-disable-next-line @typescript-eslint/no-unused-expressions,prefer-spread,prefer-rest-params
-                    n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+                n = f.fbq = function(...args: any) {
+                    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+                    n.callMethod ? n.callMethod(...args) : n.queue.push(args);
                 };
                 if (!f._fbq) f._fbq = n;
                 n.push = n; n.loaded = !0; n.version = '2.0';

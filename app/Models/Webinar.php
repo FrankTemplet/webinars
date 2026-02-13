@@ -8,7 +8,7 @@ class Webinar extends Model
 {
     protected $fillable = [
         'client_id', 'title', 'subtitle', 'description', 'slug', 'zoom_webinar_id', 'hero_image', 'header_logo',
-        'form_schema', 'tracking_scripts', 'meta_title', 'meta_description',
+        'form_schema', 'tracking_scripts', 'meta_title', 'meta_description', 'clay_webhook_url',
     ];
 
     protected $casts = [

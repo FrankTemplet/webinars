@@ -62,6 +62,12 @@ class WebinarForm
                             }
                         }
                     }),
+                TextInput::make('clay_webhook_url')
+                    ->label('Clay Webhook URL')
+                    ->helperText('Enter your Clay webhook URL to automatically enrich lead data on each registration.')
+                    ->url()
+                    ->nullable()
+                    ->columnSpanFull(),
                 Textarea::make('description')
                     ->columnSpanFull(),
                 FileUpload::make('hero_image')

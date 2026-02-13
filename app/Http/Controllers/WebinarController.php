@@ -17,25 +17,25 @@ class WebinarController extends Controller
             $webinarSlug = $clientSlug;
             $clientSlug = null;
         }
-        
+
         // Obtener cliente del middleware (inyectado en request attributes)
         $client = $request->attributes->get('client');
-        
+
         // Si no hay cliente detectado, intentar obtener del parámetro de ruta (desarrollo local)
         if (!$client && $clientSlug) {
             $client = Client::with('socialMedia')->where('slug', $clientSlug)->firstOrFail();
         }
-        
+
         // Si aún no hay cliente, error 404
         if (!$client) {
             abort(404, 'Cliente no encontrado. Verifica que el subdominio sea correcto o usa la ruta /client/{client}/webinars/{slug}');
         }
-        
+
         // Cargar relaciones si no están cargadas
         if (!$client->relationLoaded('socialMedia')) {
             $client->load('socialMedia');
         }
-        
+
         $webinar = Webinar::where('client_id', $client->id)
             ->where('slug', $webinarSlug)
             ->firstOrFail();
@@ -53,20 +53,20 @@ class WebinarController extends Controller
             $webinarSlug = $clientSlug;
             $clientSlug = null;
         }
-        
+
         // Obtener cliente del middleware (inyectado en request attributes)
         $client = $request->attributes->get('client');
-        
+
         // Si no hay cliente detectado, intentar obtener del parámetro de ruta (desarrollo local)
         if (!$client && $clientSlug) {
             $client = Client::with('socialMedia')->where('slug', $clientSlug)->firstOrFail();
         }
-        
+
         // Si aún no hay cliente, error 404
         if (!$client) {
             abort(404, 'Cliente no encontrado. Verifica que el subdominio sea correcto o usa la ruta /client/{client}/webinars/{slug}');
         }
-        
+
         $webinar = Webinar::where('client_id', $client->id)
             ->where('slug', $webinarSlug)
             ->firstOrFail();
@@ -76,7 +76,7 @@ class WebinarController extends Controller
         if ($webinar->form_schema) {
             foreach ($webinar->form_schema as $field) {
                 $fieldRules = [];
-                
+
                 if ($field['required'] ?? false) {
                     $fieldRules[] = 'required';
                 } else {
@@ -86,7 +86,7 @@ class WebinarController extends Controller
                 if (($field['type'] ?? '') === 'email') {
                     $fieldRules[] = 'email';
                 }
-                
+
                 if (($field['type'] ?? '') === 'tel') {
                     // With intl-tel-input, we accept international formats.
                     // Just ensure it's a reasonable length.
@@ -129,7 +129,7 @@ class WebinarController extends Controller
         $eventId = $request->input('event_id');
         if ($eventId && $webinar->tracking_scripts) {
             $metaService = app(\App\Services\MetaConversionsService::class);
-            
+
             foreach ($webinar->tracking_scripts as $script) {
                 if (
                     ($script['platform'] ?? '') === 'facebook' &&
@@ -148,6 +148,18 @@ class WebinarController extends Controller
                     );
                 }
             }
+        }
+
+        // Send lead to Clay for enrichment if configured
+        if (!empty($webinar->clay_webhook_url)) {
+            $clayService = app(\App\Services\ClayService::class);
+            $leadData = $clayService->prepareLeadData(
+                $submissionData,
+                $utmData,
+                $webinar->title,
+                $client->name
+            );
+            $clayService->sendLead($webinar->clay_webhook_url, $leadData);
         }
 
         return back()->with('success', 'Gracias! Sus datos han sido ingresados con éxito.');
