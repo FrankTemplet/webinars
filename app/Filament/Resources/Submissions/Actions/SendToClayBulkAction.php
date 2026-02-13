@@ -13,12 +13,69 @@ class SendToClayBulkAction
     public static function make(): Action
     {
         return Action::make('sendToClay')
-            ->label('Enviar todos a Clay')
+            ->label(function ($livewire) {
+                // Obtener los filtros aplicados
+                $filters = $livewire->tableFilters ?? [];
+                $webinarId = $filters['submitted']['webinar_id'] ?? null;
+
+                if (!$webinarId) {
+                    return 'Enviar a Clay';
+                }
+
+                // Contar registros pendientes
+                $pendingCount = Submission::query()
+                    ->where('webinar_id', $webinarId)
+                    ->whereNull('sent_to_clay_at')
+                    ->count();
+
+                return $pendingCount > 0
+                    ? "Enviar ({$pendingCount}) a Clay"
+                    : 'Enviar a Clay';
+            })
             ->icon('heroicon-o-paper-airplane')
             ->color('success')
+            ->visible(function ($livewire) {
+                // Obtener los filtros aplicados
+                $filters = $livewire->tableFilters ?? [];
+                $webinarId = $filters['submitted']['webinar_id'] ?? null;
+                $clientId = $filters['submitted']['client_id'] ?? null;
+
+                // Solo mostrar si hay cliente y webinar seleccionados
+                if (!$webinarId || !$clientId) {
+                    return false;
+                }
+
+                // Verificar que el webinar tenga webhook configurado
+                $webinar = \App\Models\Webinar::find($webinarId);
+                if (!$webinar || empty($webinar->clay_webhook_url)) {
+                    return false;
+                }
+
+                // Solo mostrar si hay registros pendientes
+                $pendingCount = Submission::query()
+                    ->where('webinar_id', $webinarId)
+                    ->whereNull('sent_to_clay_at')
+                    ->count();
+
+                return $pendingCount > 0;
+            })
             ->requiresConfirmation()
             ->modalHeading('Enviar registros a Clay')
-            ->modalDescription('¿Estás seguro de que deseas enviar todos los registros filtrados (no enviados) a Clay?')
+            ->modalDescription(function ($livewire) {
+                $filters = $livewire->tableFilters ?? [];
+                $webinarId = $filters['submitted']['webinar_id'] ?? null;
+
+                if ($webinarId) {
+                    $pendingCount = Submission::query()
+                        ->where('webinar_id', $webinarId)
+                        ->whereNull('sent_to_clay_at')
+                        ->count();
+
+                    return "¿Estás seguro de que deseas enviar {$pendingCount} registro(s) no enviado(s) a Clay?";
+                }
+
+                return '¿Estás seguro de que deseas enviar todos los registros filtrados (no enviados) a Clay?';
+            })
             ->modalSubmitActionLabel('Sí, enviar')
             ->action(function ($livewire) {
                 $clayService = app(ClayService::class);

@@ -159,7 +159,12 @@ class WebinarController extends Controller
                 $webinar->title,
                 $client->name
             );
-            $clayService->sendLead($webinar->clay_webhook_url, $leadData);
+            $sent = $clayService->sendLead($webinar->clay_webhook_url, $leadData);
+
+            // Marcar como enviado a Clay si fue exitoso
+            if ($sent) {
+                $submission->update(['sent_to_clay_at' => now()]);
+            }
         }
 
         return back()->with('success', 'Gracias! Sus datos han sido ingresados con éxito.');
