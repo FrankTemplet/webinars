@@ -14,7 +14,7 @@ class SubmissionsByClientChart extends ChartWidget
 
     protected static ?int $sort = 4;
 
-    protected ?string $heading = 'Registers per client';
+    protected ?string $heading = 'Registers per Channel';
 
     protected ?string $maxHeight = '150px';
 
@@ -22,27 +22,41 @@ class SubmissionsByClientChart extends ChartWidget
     {
         $startDate = $this->filters['startDate'] ?? null;
         $endDate = $this->filters['endDate'] ?? null;
+        $clientId = $this->filters['client_id'] ?? null;
+        $webinarId = $this->filters['webinar_id'] ?? null;
 
         $query = Submission::query()
-            ->join('webinars', 'submissions.webinar_id', '=', 'webinars.id')
-            ->join('clients', 'webinars.client_id', '=', 'clients.id')
-            ->select('clients.id', 'clients.name', DB::raw('COUNT(submissions.id) as count'));
+            ->select('utm_medium', DB::raw('COUNT(*) as count'))
+            ->whereNotNull('utm_medium')
+            ->where('utm_medium', '!=', '');
 
         if ($startDate) {
-            $query->whereDate('submissions.created_at', '>=', Carbon::parse($startDate));
+            $query->whereDate('created_at', '>=', Carbon::parse($startDate));
         }
         if ($endDate) {
-            $query->whereDate('submissions.created_at', '<=', Carbon::parse($endDate));
+            $query->whereDate('created_at', '<=', Carbon::parse($endDate));
+        }
+        if ($webinarId) {
+            $query->where('webinar_id', $webinarId);
+        }
+        if ($clientId) {
+            $query->whereHas('webinar', fn ($q) => $q->where('client_id', $clientId));
         }
 
         $data = $query
-            ->groupBy('clients.id', 'clients.name')
+            ->groupBy('utm_medium')
             ->orderByDesc('count')
             ->limit(8)
             ->get();
 
-        $labels = $data->pluck('name')->toArray();
+        $labels = $data->pluck('utm_medium')->toArray();
         $values = $data->pluck('count')->toArray();
+
+        // Si no hay datos, mostrar mensaje
+        if (empty($labels)) {
+            $labels = ['No data'];
+            $values = [0];
+        }
 
         $colors = [
             '#22c55e', '#8b5cf6', '#f97316', '#06b6d4',
@@ -52,7 +66,7 @@ class SubmissionsByClientChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Registros',
+                    'label' => 'Registers',
                     'data' => $values,
                     'backgroundColor' => array_slice($colors, 0, count($values)),
                     'hoverOffset' => 4,

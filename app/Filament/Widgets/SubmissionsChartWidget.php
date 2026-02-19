@@ -14,7 +14,7 @@ class SubmissionsChartWidget extends ChartWidget
 
     protected static ?int $sort = 2;
 
-    protected ?string $heading = 'Registers per day';
+    protected ?string $heading = 'Registers by Employee Range';
     protected ?string $maxHeight = '300px';
 
     protected function getData(): array
@@ -25,7 +25,6 @@ class SubmissionsChartWidget extends ChartWidget
         $webinarId = $this->filters['webinar_id'] ?? null;
 
         $query = Submission::query()
-            ->select(DB::raw('DATE(created_at) as date'), DB::raw('COUNT(*) as count'))
             ->whereDate('created_at', '>=', Carbon::parse($startDate))
             ->whereDate('created_at', '<=', Carbon::parse($endDate));
 
@@ -36,22 +35,44 @@ class SubmissionsChartWidget extends ChartWidget
             $query->whereHas('webinar', fn ($q) => $q->where('client_id', $clientId));
         }
 
-        $data = $query
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get()
-            ->pluck('count', 'date')
-            ->toArray();
+        $submissions = $query->get();
 
-        // Rellenar días sin datos
-        $period = Carbon::parse($startDate)->daysUntil(Carbon::parse($endDate));
+        // Agrupar por employee_range
+        $employeeRangeCounts = [];
+        foreach ($submissions as $submission) {
+            $employeeRange = $submission->data['employee_range'] ?? 'Not specified';
+            if (!isset($employeeRangeCounts[$employeeRange])) {
+                $employeeRangeCounts[$employeeRange] = 0;
+            }
+            $employeeRangeCounts[$employeeRange]++;
+        }
+
+        // Ordenar los rangos de manera lógica
+        $rangeOrder = [
+            '1-10',
+            '11-50',
+            '51-200',
+            '201-500',
+            '501-1000',
+            '1000+',
+            'Not specified',
+        ];
+
         $labels = [];
         $values = [];
+        foreach ($rangeOrder as $range) {
+            if (isset($employeeRangeCounts[$range])) {
+                $labels[] = $range;
+                $values[] = $employeeRangeCounts[$range];
+            }
+        }
 
-        foreach ($period as $date) {
-            $dateStr = $date->format('Y-m-d');
-            $labels[] = $date->format('d M');
-            $values[] = $data[$dateStr] ?? 0;
+        // Agregar rangos que no estén en el orden predefinido
+        foreach ($employeeRangeCounts as $range => $count) {
+            if (!in_array($range, $rangeOrder)) {
+                $labels[] = $range;
+                $values[] = $count;
+            }
         }
 
         return [
@@ -59,10 +80,15 @@ class SubmissionsChartWidget extends ChartWidget
                 [
                     'label' => 'Registers',
                     'data' => $values,
-                    'borderColor' => '#22c55e',
-                    'backgroundColor' => 'rgba(34, 197, 94, 0.1)',
-                    'fill' => true,
-                    'tension' => 0.4,
+                    'backgroundColor' => [
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(34, 197, 94, 0.8)',
+                        'rgba(249, 115, 22, 0.8)',
+                        'rgba(168, 85, 247, 0.8)',
+                        'rgba(236, 72, 153, 0.8)',
+                        'rgba(234, 179, 8, 0.8)',
+                        'rgba(148, 163, 184, 0.8)',
+                    ],
                 ],
             ],
             'labels' => $labels,
@@ -71,6 +97,6 @@ class SubmissionsChartWidget extends ChartWidget
 
     protected function getType(): string
     {
-        return 'line';
+        return 'bar';
     }
 }

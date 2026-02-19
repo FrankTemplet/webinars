@@ -14,7 +14,7 @@ class SubmissionsByWebinarChart extends ChartWidget
 
     protected static ?int $sort = 3;
 
-    protected ?string $heading = 'Top 10 Webinars per Register';
+    protected ?string $heading = 'Registers by Country';
     protected ?string $maxHeight = '300px';
 
     protected function getData(): array
@@ -22,10 +22,9 @@ class SubmissionsByWebinarChart extends ChartWidget
         $startDate = $this->filters['startDate'] ?? null;
         $endDate = $this->filters['endDate'] ?? null;
         $clientId = $this->filters['client_id'] ?? null;
+        $webinarId = $this->filters['webinar_id'] ?? null;
 
-        $query = Submission::query()
-            ->select('webinar_id', DB::raw('COUNT(*) as count'))
-            ->with('webinar:id,title');
+        $query = Submission::query();
 
         if ($startDate) {
             $query->whereDate('created_at', '>=', Carbon::parse($startDate));
@@ -33,18 +32,30 @@ class SubmissionsByWebinarChart extends ChartWidget
         if ($endDate) {
             $query->whereDate('created_at', '<=', Carbon::parse($endDate));
         }
+        if ($webinarId) {
+            $query->where('webinar_id', $webinarId);
+        }
         if ($clientId) {
             $query->whereHas('webinar', fn ($q) => $q->where('client_id', $clientId));
         }
 
-        $data = $query
-            ->groupBy('webinar_id')
-            ->orderByDesc('count')
-            ->limit(10)
-            ->get();
+        $submissions = $query->get();
 
-        $labels = $data->map(fn ($item) => $item->webinar?->title ?? 'Sin título')->toArray();
-        $values = $data->pluck('count')->toArray();
+        // Agrupar por país
+        $countryCounts = [];
+        foreach ($submissions as $submission) {
+            $country = $submission->data['country'] ?? 'Not specified';
+            if (!isset($countryCounts[$country])) {
+                $countryCounts[$country] = 0;
+            }
+            $countryCounts[$country]++;
+        }
+
+        // Ordenar por cantidad descendente
+        arsort($countryCounts);
+
+        $labels = array_keys($countryCounts);
+        $values = array_values($countryCounts);
 
         $colors = [
             '#22c55e', '#8b5cf6', '#f97316', '#06b6d4', '#f59e0b',
@@ -54,7 +65,7 @@ class SubmissionsByWebinarChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Registros',
+                    'label' => 'Registers',
                     'data' => $values,
                     'backgroundColor' => array_slice($colors, 0, count($values)),
                     'borderRadius' => 6,

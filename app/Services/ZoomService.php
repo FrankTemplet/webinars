@@ -65,7 +65,7 @@ class ZoomService
         }
 
         $webinars = $response->json()['webinars'] ?? [];
-        
+
         $options = [];
         foreach ($webinars as $webinar) {
             $options[$webinar['id']] = $webinar['topic'] . " ({$webinar['start_time']})";
@@ -112,5 +112,31 @@ class ZoomService
         ]);
 
         return true;
+    }
+
+    /**
+     * Get webinar participants (attendance)
+     */
+    public function getWebinarParticipants(string $webinarId): int
+    {
+        $token = $this->getAccessToken();
+        if (!$token) return 0;
+
+        // Try to get past webinar participants report
+        $response = Http::withToken($token)
+            ->get("{$this->baseUrl}/report/webinars/{$webinarId}/participants", [
+                'page_size' => 300,
+            ]);
+
+        if ($response->failed()) {
+            Log::warning('Zoom Get Participants Failed', [
+                'webinar_id' => $webinarId,
+                'error' => $response->json()
+            ]);
+            return 0;
+        }
+
+        $data = $response->json();
+        return $data['total_records'] ?? 0;
     }
 }

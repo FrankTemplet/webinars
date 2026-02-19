@@ -5,6 +5,7 @@ namespace App\Filament\Widgets;
 use App\Models\Client;
 use App\Models\Submission;
 use App\Models\Webinar;
+use App\Services\ZoomService;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
@@ -38,22 +39,35 @@ class StatsOverviewWidget extends BaseWidget
             $query->whereHas('webinar', fn ($q) => $q->where('client_id', $clientId));
         }
 
-        $totalSubmissions = $query->count();
+        $totalSubmissions = $query
+            ->where('data->email', 'not like', '%@%templet%')
+            ->where('data->email', 'not like', '%@%cwc%')
+            ->where('data->email', 'not like', '%@%liberynet%')
+            ->distinct('data->email')
+            ->count('data->email');
 
-        // Submissions de hoy
-        $todaySubmissions = (clone $query)
-            ->whereDate('created_at', Carbon::today())
+        // Submissions sin utm
+        $submissionUtmBlanks = (clone $query)
+            ->whereNull('utm_source')
+            ->whereNull('utm_medium')
+            ->whereNull('utm_campaign')
+            ->whereNull('utm_term')
+            ->whereNull('utm_content')
             ->count();
 
-        // Submissions esta semana
-        $weekSubmissions = (clone $query)
-            ->whereBetween('created_at', [Carbon::now()->startOfWeek(), Carbon::now()->endOfWeek()])
-            ->count();
+        // Asistencia al webinar (desde Zoom)
+        $webinarAttendance = 0;
+        if ($webinarId) {
+            $webinar = Webinar::find($webinarId);
+            if ($webinar && $webinar->zoom_webinar_id) {
+                $zoomService = app(ZoomService::class);
+                $webinarAttendance = $zoomService->getWebinarParticipants($webinar->zoom_webinar_id);
+            }
+        }
 
         // Submissions este mes
-        $monthSubmissions = (clone $query)
-            ->whereMonth('created_at', Carbon::now()->month)
-            ->whereYear('created_at', Carbon::now()->year)
+        $registeredLeads = (clone $query)
+            ->where('utm_source', 'paid')
             ->count();
 
         // Total de clientes y webinars
@@ -66,18 +80,18 @@ class StatsOverviewWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-users')
                 ->color('primary'),
 
-            Stat::make('Today', number_format($todaySubmissions))
-                ->description('Today registers')
+            Stat::make('Register Contacts', number_format($submissionUtmBlanks))
+                ->description('Blanks UTM fields')
                 ->descriptionIcon('heroicon-m-calendar')
                 ->color('success'),
 
-            Stat::make('This week', number_format($weekSubmissions))
-                ->description('Last 7 days')
-                ->descriptionIcon('heroicon-m-chart-bar')
+            Stat::make('Webinar Attendance', number_format($webinarAttendance))
+                ->description('Registered attendance')
+                ->descriptionIcon('heroicon-m-user-group')
                 ->color('info'),
 
-            Stat::make('This month', number_format($monthSubmissions))
-                ->description('Last 30 days')
+            Stat::make('Leads', number_format($registeredLeads))
+                ->description('Leads registered')
                 ->descriptionIcon('heroicon-m-calendar-days')
                 ->color('warning'),
 
