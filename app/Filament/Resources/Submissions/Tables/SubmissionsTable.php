@@ -87,9 +87,6 @@ class SubmissionsTable
             ], layout: FiltersLayout::AboveContent)
             ->filtersFormColumns(1)
             ->deferFilters(false)
-            ->recordActions([
-                EditAction::make(),
-            ])
             ->headerActions([
                 \App\Filament\Resources\Submissions\Actions\SendToClayBulkAction::make(),
                 \pxlrbt\FilamentExcel\Actions\Tables\ExportAction::make()
@@ -101,6 +98,7 @@ class SubmissionsTable
             ->recordActions([
                 ViewAction::make(),
                 DeleteAction::make(),
+                EditAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
