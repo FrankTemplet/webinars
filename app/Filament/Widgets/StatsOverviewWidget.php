@@ -63,6 +63,17 @@ class StatsOverviewWidget extends BaseWidget
                 $zoomService = app(ZoomService::class);
                 $webinarAttendance = $zoomService->getWebinarParticipants($webinar->zoom_webinar_id);
             }
+        } else {
+            // Si no se filtra por webinar, sumar asistencia de todos los webinars filtrados
+            $webinars = Webinar::query()
+                ->get();
+
+            $zoomService = app(ZoomService::class);
+            foreach ($webinars as $webinar) {
+                if ($webinar->zoom_webinar_id) {
+                    $webinarAttendance += $zoomService->getWebinarParticipants($webinar->zoom_webinar_id);
+                }
+            }
         }
 
         // Submissions este mes
