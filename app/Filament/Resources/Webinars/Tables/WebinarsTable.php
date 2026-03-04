@@ -24,6 +24,14 @@ class WebinarsTable
                     ->searchable(),
                 TextColumn::make('slug')
                     ->searchable(),
+                TextColumn::make('meta_campaign_id')
+                    ->label('Meta Campaign')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('ad_spend')
+                    ->money('USD')
+                    ->sortable()
+                    ->toggleable(),
                 ImageColumn::make('hero_image'),
                 TextColumn::make('created_at')
                     ->dateTime()

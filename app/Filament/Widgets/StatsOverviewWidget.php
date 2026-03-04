@@ -103,6 +103,12 @@ class StatsOverviewWidget extends BaseWidget
             $webinarAttendance = $zoomService->getWebinarParticipants($webinar->zoom_webinar_id);
         }
 
+        // --- NEW META ADS LOGIC ---
+        $totalAdSpend = $webinar->ad_spend ?? 0;
+
+        // Calculate CPL (Cost Per Lead)
+        // Formula: Ad Spend / Total Registrations
+        $cpl = $totalSubmissions > 0 ? ($totalAdSpend / $totalSubmissions) : 0;
 
         $stats = [
             Stat::make('Total registers', number_format($totalSubmissions))
@@ -124,6 +130,16 @@ class StatsOverviewWidget extends BaseWidget
                 ->description('Registered attendance')
                 ->descriptionIcon('heroicon-m-user-group')
                 ->color('info'),
+
+            Stat::make('Total Ad Spend', '$' . number_format($totalAdSpend, 2))
+                ->description('Synced from Meta Ads')
+                ->descriptionIcon('heroicon-m-currency-dollar')
+                ->color('warning'),
+
+            Stat::make('Cost Per Lead (CPL)', '$' . number_format($cpl, 2))
+                ->description('Spend / Registrations')
+                ->descriptionIcon('heroicon-m-chart-bar')
+                ->color($cpl < 10 ? 'success' : 'danger'),
         ];
 
         return $stats;

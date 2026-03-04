@@ -1,7 +1,6 @@
 <?php
 
 return [
-
     /*
     |--------------------------------------------------------------------------
     | Third Party Services
@@ -41,4 +40,10 @@ return [
         'client_secret' => env('ZOOM_CLIENT_SECRET'),
     ],
 
+    'facebook' => [
+        'app_id' => env('FACEBOOK_APP_ID'),
+        'app_secret' => env('FACEBOOK_APP_SECRET'),
+        'access_token' => env('FACEBOOK_ACCESS_TOKEN'),
+        'ad_account_id' => env('FACEBOOK_AD_ACCOUNT_ID'),
+    ],
 ];

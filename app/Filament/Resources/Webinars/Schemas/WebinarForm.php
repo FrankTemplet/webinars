@@ -68,6 +68,11 @@ class WebinarForm
                     ->url()
                     ->nullable()
                     ->columnSpanFull(),
+                TextInput::make('meta_campaign_id')
+                    ->label('Meta Campaign ID')
+                    ->helperText('The ID of the Facebook Ads campaign for this webinar. Used for cost tracking.')
+                    ->maxLength(255)
+                    ->columnSpanFull(),
                 Textarea::make('description')
                     ->columnSpanFull(),
                 FileUpload::make('hero_image')

@@ -22,6 +22,15 @@ class ClientForm
                     ->image()
                     ->disk('public')
                     ->directory('clients/logos'),
+                TextInput::make('meta_ad_account_id')
+                    ->label('Meta Ad Account ID')
+                    ->helperText('Override the global Ad Account ID. Format: act_123456789')
+                    ->maxLength(255),
+                TextInput::make('meta_access_token')
+                    ->label('Meta Access Token')
+                    ->helperText('Override the global System User Access Token.')
+                    ->password() // Hide token content
+                    ->maxLength(5000), // Tokens can be long
                 Repeater::make('socialMedia')
                     ->relationship('socialMedia')
                     ->schema([
