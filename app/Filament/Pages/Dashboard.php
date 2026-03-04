@@ -62,13 +62,21 @@ class Dashboard extends BaseDashboard
 
     public function getWidgets(): array
     {
-        return [
+        $widgets = [
             StatsOverviewWidget::class,
-            SubmissionsChartWidget::class,
-            SubmissionsByWebinarChart::class,
-            SubmissionsByClientChart::class,
-            UtmSourcesChart::class,
         ];
+
+        // Solo mostrar los charts si hay un webinar seleccionado
+        if (!empty($this->filters['webinar_id'])) {
+            $widgets = array_merge($widgets, [
+                SubmissionsChartWidget::class,
+                SubmissionsByWebinarChart::class,
+                SubmissionsByClientChart::class,
+                UtmSourcesChart::class,
+            ]);
+        }
+
+        return $widgets;
     }
 
     public function getColumns(): int|array

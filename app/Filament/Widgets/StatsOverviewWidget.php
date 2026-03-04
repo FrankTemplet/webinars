@@ -2,7 +2,6 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Client;
 use App\Models\Submission;
 use App\Models\Webinar;
 use App\Services\ZoomService;
@@ -16,6 +15,21 @@ class StatsOverviewWidget extends BaseWidget
     use InteractsWithPageFilters;
 
     protected static ?int $sort = 1;
+
+    protected int | string | array $columnSpan = 'full';
+
+    protected function getColumns(): int
+    {
+        // Retornar el número de columnas basado en cuántos stats vamos a mostrar
+        $webinarId = $this->filters['webinar_id'] ?? null;
+
+        if (!$webinarId) {
+            return 1; // Una columna para el mensaje
+        }
+
+        $webinar = Webinar::find($webinarId);
+        return 2;
+    }
 
     protected function getStats(): array
     {
@@ -55,37 +69,42 @@ class StatsOverviewWidget extends BaseWidget
             ->whereNull('utm_content')
             ->count();
 
-        // Asistencia al webinar (desde Zoom)
-        $webinarAttendance = 0;
-        if ($webinarId) {
-            $webinar = Webinar::find($webinarId);
-            if ($webinar && $webinar->zoom_webinar_id) {
-                $zoomService = app(ZoomService::class);
-                $webinarAttendance = $zoomService->getWebinarParticipants($webinar->zoom_webinar_id);
-            }
-        } else {
-            // Si no se filtra por webinar, sumar asistencia de todos los webinars filtrados
-            $webinars = Webinar::query()
-                ->get();
-
-            $zoomService = app(ZoomService::class);
-            foreach ($webinars as $webinar) {
-                if ($webinar->zoom_webinar_id) {
-                    $webinarAttendance += $zoomService->getWebinarParticipants($webinar->zoom_webinar_id);
-                }
-            }
+        // Si no hay webinar seleccionado, mostrar mensaje
+        if (!$webinarId) {
+            return [
+                Stat::make('Select a Webinar to View Statistics', '')
+                    ->description('Please select a webinar from the filters above to view detailed metrics including registrations, leads, attendance, and Meta Ads insights.')
+                    ->descriptionIcon('heroicon-m-funnel')
+                    ->color('warning')
+                    ->extraAttributes(['class' => 'col-span-full']),
+            ];
         }
 
-        // Submissions este mes
+        // Obtener el webinar seleccionado
+        $webinar = Webinar::find($webinarId);
+        if (!$webinar) {
+            return [
+                Stat::make('Webinar not found', 'The selected webinar could not be found')
+                    ->description('Please select a valid webinar')
+                    ->descriptionIcon('heroicon-m-exclamation-triangle')
+                    ->color('danger'),
+            ];
+        }
+
+        // Submissions con utm_source = paid
         $registeredLeads = (clone $query)
             ->where('utm_source', 'paid')
             ->count();
 
-        // Total de clientes y webinars
-        $totalClients = Client::count();
-        $totalWebinars = Webinar::count();
+        // Asistencia al webinar (desde Zoom)
+        $webinarAttendance = 0;
+        if ($webinar->zoom_webinar_id) {
+            $zoomService = app(ZoomService::class);
+            $webinarAttendance = $zoomService->getWebinarParticipants($webinar->zoom_webinar_id);
+        }
 
-        return [
+
+        $stats = [
             Stat::make('Total registers', number_format($totalSubmissions))
                 ->description('Total submissions')
                 ->descriptionIcon('heroicon-m-users')
@@ -96,25 +115,17 @@ class StatsOverviewWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-calendar')
                 ->color('success'),
 
+            Stat::make('Leads', number_format($registeredLeads))
+                ->description('Leads registered (paid)')
+                ->descriptionIcon('heroicon-m-calendar-days')
+                ->color('warning'),
+
             Stat::make('Webinar Attendance', number_format($webinarAttendance))
                 ->description('Registered attendance')
                 ->descriptionIcon('heroicon-m-user-group')
                 ->color('info'),
-
-            Stat::make('Leads', number_format($registeredLeads))
-                ->description('Leads registered')
-                ->descriptionIcon('heroicon-m-calendar-days')
-                ->color('warning'),
-
-            Stat::make('Clients', number_format($totalClients))
-                ->description('Total of clients')
-                ->descriptionIcon('heroicon-m-building-office')
-                ->color('secondary'),
-
-            Stat::make('Webinars', number_format($totalWebinars))
-                ->description('Total webinars')
-                ->descriptionIcon('heroicon-m-video-camera')
-                ->color('danger'),
         ];
+
+        return $stats;
     }
 }
