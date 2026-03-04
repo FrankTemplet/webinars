@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 class MetaMarketingService
 {
     protected ?string $adAccountId;
+    protected bool $isInitialized = false;
 
     public function __construct(?string $adAccountId = null, ?string $accessToken = null)
     {
@@ -21,15 +22,10 @@ class MetaMarketingService
 
         if ($appId && $appSecret && $token) {
             try {
-                if (!Api::instance()) {
-                   Api::init($appId, $appSecret, $token);
-                } else {
-                    // Re-init if using a different token for this instance?
-                    // The SDK singleton pattern makes this tricky.
-                    // Best practice: Pass the Api instance to the objects, but here we are using static methods.
-                    // We can force re-init or just rely on 'Api::init' replacing the instance.
-                    Api::init($appId, $appSecret, $token);
-                }
+                // Force re-initialization to ensure we are using the correct credentials
+                // for this specific service instance, preventing singleton leakage.
+                Api::init($appId, $appSecret, $token);
+                $this->isInitialized = true;
             } catch (\Exception $e) {
                 Log::error('Meta API Init Failed: ' . $e->getMessage());
             }
@@ -38,8 +34,8 @@ class MetaMarketingService
 
     public function getCampaignSpend(string $campaignId): float
     {
-        if (!Api::instance()) {
-             Log::warning('Meta API not initialized. Cannot fetch campaign spend.');
+        if (!$this->isInitialized || !Api::instance()) {
+             Log::warning('Meta API not initialized for this requested scope. Skipping.');
              return 0.0;
         }
 
