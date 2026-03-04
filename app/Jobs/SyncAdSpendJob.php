@@ -32,7 +32,7 @@ class SyncAdSpendJob implements ShouldQueue
             $adAccountId = $client?->meta_ad_account_id;
             $accessToken = $client?->meta_access_token;
 
-            // Instantiate service with specific credentials (or null/null to use global defaults)
+            // Instantiate service yes with specific credentials (or null/null to use global defaults)
             $service = new MetaMarketingService($adAccountId, $accessToken);
 
             $spend = $service->getCampaignSpend($webinar->meta_campaign_id);
