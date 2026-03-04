@@ -44,7 +44,7 @@ class MetaMarketingService
             $insights = $campaign->getInsights(
                 ['spend'],
                 [
-                    'date_preset' => 'lifetime', // Get total lifetime spend
+                    'date_preset' => 'maximum', // 'maximum' worked in testing where 'lifetime' returned 0
                 ]
             );
 
