@@ -40,7 +40,11 @@ class SubmissionsChartWidget extends ChartWidget
         // Agrupar por employee_range
         $employeeRangeCounts = [];
         foreach ($submissions as $submission) {
-            $employeeRange = $submission->data['employee_range'] ?? 'Not specified';
+            // Soportar ambos nombres de campo: employee_range (nuevo) y number_employees (legacy)
+            $employeeRange = $submission->data['employee_range'] 
+                ?? $submission->data['number_employees'] 
+                ?? 'Not specified';
+            
             if (!isset($employeeRangeCounts[$employeeRange])) {
                 $employeeRangeCounts[$employeeRange] = 0;
             }
