@@ -243,8 +243,8 @@ const submit = (): void => {
                     <label class="block text-sm font-semibold text-[#041B36] mb-2">
                         {{ field.label }} <span v-if="field.required" class="text-red-500">*</span>
                     </label>
-                    <div class="flex flex-col gap-2">
-                        <div v-for="option in field.options" :key="option" class="flex items-center">
+                    <div class="flex flex-row flex-wrap gap-x-6 gap-y-2">
+                        <div v-for="option in field.options" :key="option" class="flex items-center whitespace-nowrap">
                             <input
                                 :id="`${field.name}_${option}`"
                                 type="radio"
@@ -252,7 +252,7 @@ const submit = (): void => {
                                 :value="option"
                                 v-model="form[field.name] as string"
                                 :required="field.required"
-                                class="h-4 w-4 border-gray-300 text-[#00B0D3] focus:ring-[#00B0D3]"
+                                class="h-4 w-4 border-gray-300 text-[#00B0D3] focus:ring-[#00B0D3] cursor-pointer"
                             />
                             <label :for="`${field.name}_${option}`" class="ml-2 block text-sm text-[#656668] cursor-pointer">
                                 {{ option }}
