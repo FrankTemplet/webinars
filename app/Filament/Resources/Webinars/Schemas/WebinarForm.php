@@ -141,6 +141,7 @@ class WebinarForm
                                         'select' => 'Select',
                                         'checkbox' => 'Checkbox',
                                         'textarea' => 'Textarea',
+                                        'radio' => 'Radio Button Group',
                                     ])
                                     ->required()
                                     ->live(),
@@ -153,8 +154,16 @@ class WebinarForm
                                 Toggle::make('required')
                                     ->default(true),
                                 TagsInput::make('options')
-                                    ->visible(fn (Get $get) => $get('type') === 'select')
-                                    ->helperText('Enter options for select field'),
+                                    ->visible(fn (Get $get) => in_array($get('type'), ['select', 'radio']))
+                                    ->required(fn (Get $get) => in_array($get('type'), ['select', 'radio']))
+                                    ->helperText(fn (Get $get) => $get('type') === 'radio' ? 'Ingresa las opciones para el grupo (mínimo 2).' : 'Ingresa las opciones para el campo de selección.')
+                                    ->rules([
+                                        fn (Get $get) => function (string $attribute, $value, \Closure $fail) use ($get) {
+                                            if ($get('type') === 'radio' && (!is_array($value) || count($value) < 2)) {
+                                                $fail('El grupo de botones de radio debe tener al menos 2 opciones.');
+                                            }
+                                        },
+                                    ]),
                             ])
                             ->default([
                                 [

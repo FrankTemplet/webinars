@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Submissions\Schemas;
 
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
@@ -46,6 +47,8 @@ class SubmissionForm
                                 'number' => TextInput::make("data.{$name}")->numeric(),
                                 'textarea' => Textarea::make("data.{$name}"),
                                 'select' => Select::make("data.{$name}")
+                                    ->options(array_combine($field['options'] ?? [], $field['options'] ?? [])),
+                                'radio' => Radio::make("data.{$name}")
                                     ->options(array_combine($field['options'] ?? [], $field['options'] ?? [])),
                                 'checkbox' => Toggle::make("data.{$name}"),
                                 default => TextInput::make("data.{$name}"),

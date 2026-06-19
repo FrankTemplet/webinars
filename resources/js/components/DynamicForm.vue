@@ -12,7 +12,7 @@ declare global {
 }
 
 
-type FieldType = 'text' | 'email' | 'number' | 'tel' | 'textarea' | 'select' | 'checkbox';
+type FieldType = 'text' | 'email' | 'number' | 'tel' | 'textarea' | 'select' | 'checkbox' | 'radio';
 
 interface FormField {
     name: string;
@@ -238,6 +238,29 @@ const submit = (): void => {
                     </option>
                 </select>
 
+                <!-- Radio Button Group -->
+                <div v-else-if="field.type === 'radio'" class="pt-2">
+                    <label class="block text-sm font-semibold text-[#041B36] mb-2">
+                        {{ field.label }} <span v-if="field.required" class="text-red-500">*</span>
+                    </label>
+                    <div class="flex flex-col gap-2">
+                        <div v-for="option in field.options" :key="option" class="flex items-center">
+                            <input
+                                :id="`${field.name}_${option}`"
+                                type="radio"
+                                :name="field.name"
+                                :value="option"
+                                v-model="form[field.name] as string"
+                                :required="field.required"
+                                class="h-4 w-4 border-gray-300 text-[#00B0D3] focus:ring-[#00B0D3]"
+                            />
+                            <label :for="`${field.name}_${option}`" class="ml-2 block text-sm text-[#656668] cursor-pointer">
+                                {{ option }}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Checkbox (Custom styling) -->
                 <div v-else-if="field.type === 'checkbox'" class="flex items-center pt-2">
                     <input
@@ -253,7 +276,7 @@ const submit = (): void => {
 
                 <!-- Floating Label -->
                 <label
-                    v-if="!['checkbox'].includes(field.type)"
+                    v-if="!['checkbox', 'radio'].includes(field.type)"
                     :for="field.name"
                     class="absolute top-0 left-0 h-full px-3 py-4 text-[#656668] transition-all duration-200 ease-in-out origin-[0_0] transform scale-100 pointer-events-none peer-focus:scale-85 peer-focus:-translate-y-2 peer-not-placeholder-shown:scale-85 peer-not-placeholder-shown:-translate-y-2 peer-focus:opacity-65 peer-not-placeholder-shown:opacity-65"
                 >
