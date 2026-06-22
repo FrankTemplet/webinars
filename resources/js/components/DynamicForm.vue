@@ -131,7 +131,8 @@ const handlePhoneInput = (fieldName: string, event: Event): void => {
 const triggerFacebookConversion = (eventId: string): void => {
     if (typeof window.fbq === 'function') {
         window.fbq('track', 'CompleteRegistration', {}, { eventID: eventId });
-        console.log(`Facebook Pixel: CompleteRegistration event triggered with eventID: ${eventId}`);
+        window.fbq('track', 'Lead');
+        console.log(`Facebook Pixel: CompleteRegistration and Lead events triggered. Event ID: ${eventId}`);
     } else {
         console.warn('Facebook Pixel not loaded');
     }

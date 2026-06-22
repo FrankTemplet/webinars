@@ -40,7 +40,7 @@ class WebinarSubmissionTest extends TestCase
             ],
         ]);
 
-        $response = $this->post("/client/{$client->slug}/webinars/{$webinar->slug}", [
+        $response = $this->post("/{$client->slug}/{$webinar->slug}", [
             'first_name' => 'John',
             'preference' => 'Option 2',
         ]);
@@ -76,7 +76,7 @@ class WebinarSubmissionTest extends TestCase
             ],
         ]);
 
-        $response = $this->post("/client/{$client->slug}/webinars/{$webinar->slug}", [
+        $response = $this->post("/{$client->slug}/{$webinar->slug}", [
             // 'preference' is missing
         ]);
 
