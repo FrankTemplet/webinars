@@ -120,10 +120,8 @@ onMounted(() => {
                 if (s && s.parentNode) s.parentNode.insertBefore(t, s);
             })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
 
-            const pageViewEventId = generateUUID();
             (window as any).fbq?.('init', facebookPixel.value.pixel_id);
-            (window as any).fbq?.('track', 'PageView', {}, { eventID: pageViewEventId });
-            console.log(`Facebook Pixel: PageView event triggered with eventID: ${pageViewEventId}`);
+            // PageView removed to prevent triggering custom events on page load
         }
     }
 
