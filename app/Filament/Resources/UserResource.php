@@ -56,6 +56,11 @@ class UserResource extends Resource
                         User::ROLE_VIEWER => 'gray',
                         default => 'gray',
                     }),
+                TextColumn::make('last_login_at')
+                    ->label('Última conexión')
+                    ->dateTime()
+                    ->sortable()
+                    ->placeholder('Nunca'),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

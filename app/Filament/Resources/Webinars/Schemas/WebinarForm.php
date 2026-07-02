@@ -128,6 +128,24 @@ class WebinarForm
                     ])
                     ->columnSpanFull()
                     ->collapsible(),
+                Section::make('Dashboard Charts')
+                    ->description('Select which form fields to display as bar charts in the dashboard when this webinar is selected.')
+                    ->schema([
+                        Select::make('chartable_fields')
+                            ->label('Chartable Fields')
+                            ->multiple()
+                            ->options(function (Get $get) {
+                                $schema = $get('form_schema') ?? [];
+                                return collect($schema)
+                                    ->filter(fn ($f) => !empty($f['name']) && !empty($f['label']))
+                                    ->mapWithKeys(fn ($f) => [$f['name'] => ($f['label'] ?? $f['name']) . ' (' . ($f['type'] ?? 'text') . ')'])
+                                    ->toArray();
+                            })
+                            ->helperText('Text fields show top 10 values. Select/Radio fields show full distribution.')
+                            ->columnSpanFull(),
+                    ])
+                    ->columnSpanFull()
+                    ->collapsible(),
                 Section::make('Form Builder')
                     ->schema([
                         Repeater::make('form_schema')

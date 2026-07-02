@@ -2,10 +2,9 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Widgets\DynamicFieldChartWidget;
 use App\Filament\Widgets\StatsOverviewWidget;
 use App\Filament\Widgets\SubmissionsByClientChart;
-use App\Filament\Widgets\SubmissionsByWebinarChart;
-use App\Filament\Widgets\SubmissionsChartWidget;
 use App\Filament\Widgets\UtmSourcesChart;
 use App\Models\Client;
 use App\Models\Webinar;
@@ -68,11 +67,42 @@ class Dashboard extends BaseDashboard
 
         // Solo mostrar los charts si hay un webinar seleccionado
         if (!empty($this->filters['webinar_id'])) {
-            $widgets = array_merge($widgets, [
-                SubmissionsChartWidget::class,
-                SubmissionsByWebinarChart::class,
+            $dynamicWidgets = $this->getDynamicFieldWidgets();
+
+            $widgets = array_merge($widgets, $dynamicWidgets, [
                 SubmissionsByClientChart::class,
                 UtmSourcesChart::class,
+            ]);
+        }
+
+        return $widgets;
+    }
+
+    protected function getDynamicFieldWidgets(): array
+    {
+        $webinarId = $this->filters['webinar_id'] ?? null;
+        if (!$webinarId) {
+            return [];
+        }
+
+        $webinar = Webinar::find($webinarId);
+        if (!$webinar || empty($webinar->chartable_fields)) {
+            return [];
+        }
+
+        $fieldMap = collect($webinar->form_schema ?? [])->keyBy('name');
+        $widgets = [];
+
+        foreach ($webinar->chartable_fields as $fieldName) {
+            $field = $fieldMap->get($fieldName);
+            if (!$field) {
+                continue;
+            }
+
+            $widgets[] = DynamicFieldChartWidget::make([
+                'fieldName' => $fieldName,
+                'fieldLabel' => $field['label'] ?? $fieldName,
+                'fieldType' => $field['type'] ?? 'text',
             ]);
         }
 
