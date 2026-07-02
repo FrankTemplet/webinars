@@ -101,21 +101,25 @@ class WebinarForm
                                     ->label('Pixel ID')
                                     ->visible(fn (Get $get) => $get('platform') === 'facebook')
                                     ->required()
+                                    ->dehydrateStateUsing(fn (?string $state): ?string => $state !== null ? preg_replace('/\D+/', '', $state) : null)
                                     ->helperText('Your Facebook Pixel ID (e.g., 358413517177753)'),
                                 TextInput::make('access_token')
                                     ->label('Conversions API Access Token')
                                     ->visible(fn (Get $get) => $get('platform') === 'facebook')
                                     ->password()
+                                    ->dehydrateStateUsing(fn (?string $state): ?string => $state !== null ? preg_replace('/^[\s\x{00A0}]+|[\s\x{00A0}]+$/u', '', $state) : null)
                                     ->helperText('Optional. Get from Meta Events Manager → Settings → Generate Access Token. Required for server-side tracking.'),
                                 TextInput::make('partner_id')
                                     ->label('Partner ID')
                                     ->visible(fn (Get $get) => $get('platform') === 'linkedin')
                                     ->required()
+                                    ->dehydrateStateUsing(fn (?string $state): ?string => $state !== null ? preg_replace('/\D+/', '', $state) : null)
                                     ->helperText('Your LinkedIn Partner ID'),
                                 TextInput::make('conversion_id')
                                     ->label('Conversion ID')
                                     ->visible(fn (Get $get) => $get('platform') === 'linkedin')
                                     ->required()
+                                    ->dehydrateStateUsing(fn (?string $state): ?string => $state !== null ? preg_replace('/\D+/', '', $state) : null)
                                     ->helperText('Your LinkedIn Conversion ID (e.g., 25868049)'),
                                 Toggle::make('enabled')
                                     ->label('Enable Tracking')
