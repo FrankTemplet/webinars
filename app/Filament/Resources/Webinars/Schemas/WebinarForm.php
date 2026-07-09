@@ -74,7 +74,7 @@ class WebinarForm
                     ->maxLength(255)
                     ->columnSpanFull(),
                 TextInput::make('campaign')
-                    ->label('Campaign')
+                    ->label('Campaign Salesforce Field')
                     ->maxLength(255)
                     ->columnSpanFull(),
                 Textarea::make('description')
