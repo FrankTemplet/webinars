@@ -73,6 +73,10 @@ class WebinarForm
                     ->helperText('The ID of the Facebook Ads campaign for this webinar. Used for cost tracking.')
                     ->maxLength(255)
                     ->columnSpanFull(),
+                TextInput::make('campaign')
+                    ->label('Campaign')
+                    ->maxLength(255)
+                    ->columnSpanFull(),
                 Textarea::make('description')
                     ->columnSpanFull(),
                 FileUpload::make('hero_image')
