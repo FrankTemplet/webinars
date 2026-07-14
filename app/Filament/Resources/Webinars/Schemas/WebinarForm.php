@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Webinars\Schemas;
 
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
@@ -133,6 +134,46 @@ class WebinarForm
                             ->defaultItems(0)
                             ->addActionLabel('Add Tracking Pixel')
                             ->collapsible(),
+                    ])
+                    ->columnSpanFull()
+                    ->collapsible(),
+                Section::make('Thank You Page')
+                    ->description('Redirect registrants to a dedicated thank you page after submitting the form.')
+                    ->schema([
+                        Toggle::make('thank_you_enabled')
+                            ->label('Activar página de gracias')
+                            ->helperText('When enabled, users are redirected to /thank-you after registering instead of seeing the inline message.')
+                            ->live()
+                            ->default(false),
+                        TextInput::make('thank_you_title')
+                            ->label('Title')
+                            ->placeholder('¡Gracias por registrarte!')
+                            ->maxLength(255)
+                            ->visible(fn (Get $get) => (bool) $get('thank_you_enabled')),
+                        RichEditor::make('thank_you_message')
+                            ->label('Message')
+                            ->helperText('Shown below the title. If empty, a default message is displayed.')
+                            ->visible(fn (Get $get) => (bool) $get('thank_you_enabled'))
+                            ->columnSpanFull(),
+                        FileUpload::make('thank_you_image')
+                            ->label('Background Image')
+                            ->image()
+                            ->disk('public')
+                            ->directory('webinars/thank-you')
+                            ->required(fn (Get $get) => (bool) $get('thank_you_enabled'))
+                            ->visible(fn (Get $get) => (bool) $get('thank_you_enabled'))
+                            ->columnSpanFull(),
+                        TextInput::make('thank_you_cta_text')
+                            ->label('CTA Button Text')
+                            ->placeholder('Volver')
+                            ->maxLength(255)
+                            ->helperText('Defaults to "Volver" if left empty.')
+                            ->visible(fn (Get $get) => (bool) $get('thank_you_enabled')),
+                        TextInput::make('thank_you_cta_url')
+                            ->label('CTA Button URL')
+                            ->url()
+                            ->helperText('Defaults to the webinar page if left empty.')
+                            ->visible(fn (Get $get) => (bool) $get('thank_you_enabled')),
                     ])
                     ->columnSpanFull()
                     ->collapsible(),
