@@ -40,9 +40,12 @@ class UtmSourcesChart extends ChartWidget
             $baseQuery->whereHas('webinar', fn ($q) => $q->where('client_id', $clientId));
         }
 
-        // Contar registros con utm_source = 'paid'
+        // Contar registros con utm_source = 'paid' o que contenga 'cpc'
         $paidCount = (clone $baseQuery)
-            ->where('utm_source', 'paid')
+            ->where(function ($q) {
+                $q->where('utm_source', 'paid')
+                    ->orWhere('utm_source', 'like', '%cpc%');
+            })
             ->count();
 
         // Contar registros con utm_source = 'organic'
