@@ -181,7 +181,10 @@ class Dashboard extends BaseDashboard
         }
 
         $registeredLeads = (clone $query)
-            ->where('utm_source', 'paid')
+            ->where(function ($q) {
+                $q->where('utm_source', 'paid')
+                    ->orWhere('utm_source', 'like', '%cpc%');
+            })
             ->count();
 
         $totalClients = Client::count();
@@ -223,7 +226,12 @@ class Dashboard extends BaseDashboard
             ->toArray();
 
         // Paid vs Organic
-        $paidCount = (clone $query)->where('utm_source', 'paid')->count();
+        $paidCount = (clone $query)
+            ->where(function ($q) {
+                $q->where('utm_source', 'paid')
+                    ->orWhere('utm_source', 'like', '%cpc%');
+            })
+            ->count();
         $organicCount = (clone $query)->where('utm_source', 'organic')->count();
 
         $data = [
