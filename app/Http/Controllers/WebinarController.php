@@ -86,7 +86,7 @@ class WebinarController extends Controller
             'webinar' => $webinar->only([
                 'slug', 'title', 'meta_title', 'meta_description', 'header_logo',
                 'thank_you_title', 'thank_you_message', 'thank_you_image',
-                'thank_you_cta_text', 'thank_you_cta_url',
+                'thank_you_cta_text', 'thank_you_cta_url', 'tracking_scripts',
             ]),
             'webinarUrl' => $webinarUrl,
         ]);

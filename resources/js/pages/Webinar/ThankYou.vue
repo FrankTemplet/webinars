@@ -1,11 +1,25 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
+
+declare global {
+    interface Window {
+        fbq?: (action: string, event: string, params?: any, options?: { eventID?: string }) => void;
+        _fbq?: any;
+    }
+}
 
 interface Client {
     slug: string;
     name: string;
     logo?: string;
+}
+
+interface TrackingScript {
+    platform: 'facebook' | 'linkedin';
+    pixel_id?: string;
+    partner_id?: string;
+    enabled: boolean;
 }
 
 interface Webinar {
@@ -19,6 +33,7 @@ interface Webinar {
     thank_you_image?: string;
     thank_you_cta_text?: string;
     thank_you_cta_url?: string;
+    tracking_scripts?: TrackingScript[];
 }
 
 interface Props {
@@ -33,6 +48,35 @@ const title = computed(() => props.webinar.thank_you_title || '¡Gracias por reg
 const message = computed(() => props.webinar.thank_you_message || '<p>Recibirás un correo con los detalles del webinar.</p>');
 const ctaText = computed(() => props.webinar.thank_you_cta_text || 'Volver');
 const ctaUrl = computed(() => props.webinar.thank_you_cta_url || props.webinarUrl);
+
+const facebookPixel = computed(() => {
+    return (props.webinar.tracking_scripts || []).find(s => s.platform === 'facebook' && s.enabled);
+});
+
+onMounted(() => {
+    if (!facebookPixel.value?.pixel_id) return;
+
+    if (!window.fbq) {
+        (function(f: any, b: Document, e: string, v: string, n?: any, t?: any, s?: any) {
+            if (f.fbq) return;
+            n = f.fbq = function(...args: any) {
+                n.callMethod ? n.callMethod(...args) : n.queue.push(args);
+            };
+            if (!f._fbq) f._fbq = n;
+            n.push = n; n.loaded = !0; n.version = '2.0';
+            n.queue = [];
+            t = b.createElement(e); t.async = !0;
+            t.src = v;
+            s = b.getElementsByTagName(e)[0];
+            if (s && s.parentNode) s.parentNode.insertBefore(t, s);
+        })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+
+        window.fbq?.('init', facebookPixel.value.pixel_id);
+    }
+
+    window.fbq?.('track', 'ViewContent');
+    console.log('Facebook Pixel: ViewContent event triggered on thank you page');
+});
 </script>
 
 <template>
