@@ -2,13 +2,6 @@
 import { Head } from '@inertiajs/vue3';
 import { computed, onMounted } from 'vue';
 
-declare global {
-    interface Window {
-        fbq?: (action: string, event: string, params?: any, options?: { eventID?: string }) => void;
-        _fbq?: any;
-    }
-}
-
 interface Client {
     slug: string;
     name: string;
@@ -71,10 +64,10 @@ onMounted(() => {
             if (s && s.parentNode) s.parentNode.insertBefore(t, s);
         })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
 
-        window.fbq?.('init', facebookPixel.value.pixel_id);
+        (window as any).fbq?.('init', facebookPixel.value.pixel_id);
     }
 
-    window.fbq?.('track', 'ViewContent');
+    (window as any).fbq?.('track', 'ViewContent');
     console.log('Facebook Pixel: ViewContent event triggered on thank you page');
 });
 </script>
