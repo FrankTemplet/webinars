@@ -3,7 +3,6 @@ import { Head } from '@inertiajs/vue3';
 import DynamicForm from '@/components/DynamicForm.vue';
 import { route } from 'ziggy-js';
 import { computed, onMounted } from 'vue';
-import { generateUUID } from '@/lib/utils';
 
 // Declare global window properties for tracking scripts
 declare global {
