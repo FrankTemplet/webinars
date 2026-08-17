@@ -14,10 +14,10 @@ echo "Building assets..."
 npm ci
 npm run build
 
-echo " Migrations..."
+echo "Migrations..."
 php artisan migrate --force
 
-echo " Optimizing..."
+echo "Optimizing..."
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
