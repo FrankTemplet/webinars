@@ -30,6 +30,10 @@ class WebinarForm
                     ->maxLength(255)
                     ->live(onBlur: true)
                     ->afterStateUpdated(fn (string $operation, $state, Set $set) => $operation === 'create' ? $set('slug', Str::slug($state)) : null),
+                Toggle::make('show_title')
+                    ->label('Show title')
+                    ->helperText('Hide the title on the public landing page without deleting it.')
+                    ->default(true),
                 TextInput::make('subtitle')
                     ->maxLength(255),
                 TextInput::make('slug')

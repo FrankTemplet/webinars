@@ -45,6 +45,7 @@ interface TrackingScript {
 interface Webinar {
     slug: string;
     title: string;
+    show_title?: boolean;
     meta_title?: string;
     description?: string;
     meta_description?: string;
@@ -181,10 +182,10 @@ onMounted(() => {
                                     <img v-if="webinar.header_logo" :src="`/storage/${webinar.header_logo}`" alt="Logos" class="h-[60px] w-auto">
                                     <img v-else-if="client.logo" :src="`/storage/${client.logo}`" alt="Client Logo" class="h-[60px] w-auto">
                                 </div>
-                                <h1 class="text-[#041B36] font-bold text-[34px] md:text-[38px] leading-[1.1] mb-3 font-roboto">
+                                <h1 v-if="webinar.show_title !== false" class="text-[#041B36] font-bold text-[34px] md:text-[38px] leading-[1.1] mb-3 font-roboto">
                                     {{ webinar.title }}
                                 </h1>
-                                <p v-if="webinar.subtitle" class="text-[#00B0D3] text-[24px] leading-[29px] mb-0 tracking-normal font-normal">
+                                <p v-if="webinar.subtitle" class="text-[#1A1A1A] text-[20px] leading-[26px] mb-0 tracking-normal font-bold font-infra">
                                     {{ webinar.subtitle }}
                                 </p>
                                 <div v-if="webinar.description" class="text-[#656668] text-[16px] mb-4 font-roboto" v-html="webinar.description"></div>
@@ -244,5 +245,9 @@ onMounted(() => {
 /* Font override utility */
 .font-roboto {
     font-family: 'Roboto', sans-serif;
+}
+
+.font-infra {
+    font-family: 'Infra', 'Roboto', sans-serif;
 }
 </style>

@@ -16,6 +16,7 @@
         "laravel/tinker": "^2.10.1",
         "laravel/wayfinder": "^0.1.9",
         "pxlrbt/filament-excel": "3.0",
+        "spatie/laravel-activitylog": "^5.0",
         "tightenco/ziggy": "^2.6"
     },
     "require-dev": {
