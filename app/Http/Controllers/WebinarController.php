@@ -144,10 +144,15 @@ class WebinarController extends Controller
 
         // Register in Zoom if applicable
         if ($webinar->zoom_webinar_id) {
-            app(\App\Services\ZoomService::class)->registerRegistrant(
+            $registered = app(\App\Services\ZoomService::class)->registerRegistrant(
                 $webinar->zoom_webinar_id,
                 $submissionData
             );
+
+            // Marcar como registrado en Zoom si fue exitoso
+            if ($registered) {
+                $submission->update(['registered_in_zoom_at' => now()]);
+            }
         }
 
         // Send Meta Conversions API event if configured

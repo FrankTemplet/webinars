@@ -39,6 +39,13 @@ class SubmissionsTable
                         ->badge()
                         ->color(fn ($state) => $state ? 'success' : 'gray')
                         ->formatStateUsing(fn ($state) => $state ? 'Enviado' : 'Pendiente'),
+                    TextColumn::make('registered_in_zoom_at')
+                        ->label('Registrado en Zoom')
+                        ->dateTime()
+                        ->sortable()
+                        ->badge()
+                        ->color(fn ($state) => $state ? 'success' : 'gray')
+                        ->formatStateUsing(fn ($state) => $state ? 'Registrado' : 'Pendiente'),
                     TextColumn::make('utm_source')
                         ->searchable()
                         ->toggleable(isToggledHiddenByDefault: true),
@@ -89,6 +96,7 @@ class SubmissionsTable
             ->deferFilters(false)
             ->headerActions([
                 \App\Filament\Resources\Submissions\Actions\SendToClayBulkAction::make(),
+                \App\Filament\Resources\Submissions\Actions\RegisterInZoomBulkAction::make(),
                 \pxlrbt\FilamentExcel\Actions\Tables\ExportAction::make()
                     ->exports([
                         \pxlrbt\FilamentExcel\Exports\ExcelExport::make()
@@ -96,6 +104,7 @@ class SubmissionsTable
                     ]),
             ])
             ->recordActions([
+                \App\Filament\Resources\Submissions\Actions\RegisterInZoomAction::make(),
                 ViewAction::make(),
                 DeleteAction::make(),
                 EditAction::make(),
@@ -144,6 +153,7 @@ class SubmissionsTable
 
         return array_merge($columns, [
             \pxlrbt\FilamentExcel\Columns\Column::make('sent_to_clay_at')->heading('Enviado a Clay'),
+            \pxlrbt\FilamentExcel\Columns\Column::make('registered_in_zoom_at')->heading('Registrado en Zoom'),
             \pxlrbt\FilamentExcel\Columns\Column::make('utm_source')->heading('UTM Source'),
             \pxlrbt\FilamentExcel\Columns\Column::make('utm_medium')->heading('UTM Medium'),
             \pxlrbt\FilamentExcel\Columns\Column::make('utm_campaign')->heading('UTM Campaign'),
