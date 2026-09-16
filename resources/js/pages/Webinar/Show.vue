@@ -63,6 +63,11 @@ interface Props {
 
 const props = defineProps<Props>();
 
+const isSaseLanding = computed(() => {
+    return props.client.slug === 'libertynet'
+        && props.webinar.slug === 'mas-alla-del-firewall-la-nueva-era-sase-2';
+});
+
 // Construct the submit URL
 const submitUrl = route('webinar.store.local', {
     client: props.client.slug,
@@ -155,6 +160,11 @@ onMounted(() => {
     <Head :title="webinar.meta_title || webinar.title">
         <meta name="description" :content="webinar.meta_description || webinar.description" />
         <link rel="icon" type="image/x-icon" :href="`/storage/${client.logo}`" v-if="client.logo">
+        <link
+            v-if="isSaseLanding"
+            rel="stylesheet"
+            href="https://fonts.bunny.net/css?family=maven-pro:400,700"
+        >
 
         <!-- Noscript fallbacks are still good in the head -->
         <noscript v-if="facebookPixel">
@@ -168,7 +178,7 @@ onMounted(() => {
     </Head>
 
     <!-- Global Font Fix -->
-    <div class="font-roboto text-[#656668]">
+    <div :class="[isSaseLanding ? 'sase-landing' : 'font-roboto', 'text-[#656668]']">
         <main class="header min-h-screen">
             <div class="container-fluid mx-auto px-0">
                 <div class="flex flex-wrap h-full">
@@ -249,5 +259,69 @@ onMounted(() => {
 
 .font-infra {
     font-family: 'Infra', 'Roboto', sans-serif;
+}
+
+/* LibertyNet SASE landing: scoped to its slug through .sase-landing */
+.sase-landing,
+.sase-landing input,
+.sase-landing textarea,
+.sase-landing select,
+.sase-landing button,
+.sase-landing label,
+.sase-landing p {
+    font-family: 'Maven Pro', sans-serif;
+}
+
+.sase-landing header h1 {
+    display: none;
+}
+
+.sase-landing header > p {
+    color: #FF6000 !important;
+    font-family: 'Maven Pro', sans-serif !important;
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    line-height: 28.8px !important;
+    margin-bottom: 16px !important;
+}
+
+.sase-landing input:not([type='radio']):not([type='checkbox']),
+.sase-landing textarea,
+.sase-landing select {
+    color: #707070 !important;
+    border-color: #707070 !important;
+    border-radius: 10px !important;
+}
+
+.sase-landing input:not([type='radio']):not([type='checkbox']):focus,
+.sase-landing textarea:focus,
+.sase-landing select:focus {
+    color: #010812 !important;
+    background-color: #f4f4f4 !important;
+    border-color: #FF6000 !important;
+    box-shadow: 0 0 0 0.25rem rgba(255, 96, 0, 0.25) !important;
+}
+
+.sase-landing button[type='submit'] {
+    color: #FFFFFF !important;
+    background-color: #FF6000 !important;
+    border-color: #FF6000 !important;
+    border-radius: 6px !important;
+    padding: 10px 24px !important;
+    text-transform: none !important;
+}
+
+.sase-landing button[type='submit']:hover,
+.sase-landing button[type='submit']:focus {
+    color: #FFFFFF !important;
+    background-color: #e65c0c !important;
+    border-color: #e65c0c !important;
+}
+
+@media (min-width: 768px) {
+    .sase-landing .wrapper {
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
+    }
 }
 </style>
