@@ -159,7 +159,14 @@ onMounted(() => {
 <template>
     <Head :title="webinar.meta_title || webinar.title">
         <meta name="description" :content="webinar.meta_description || webinar.description" />
-        <link rel="icon" type="image/x-icon" :href="`/storage/${client.logo}`" v-if="client.logo">
+        <link
+            rel="icon"
+            type="image/x-icon"
+            :href="isSaseLanding
+                ? 'https://libertynet.templet.io/RSVP/SASE-2/images/favicon.ico'
+                : `/storage/${client.logo}`"
+            v-if="isSaseLanding || client.logo"
+        >
         <link
             v-if="isSaseLanding"
             rel="stylesheet"
@@ -189,8 +196,18 @@ onMounted(() => {
 
                             <header class="mb-4 mt-3">
                                 <div class="logo pb-4 mb-3 xl:mb-6">
-                                    <img v-if="webinar.header_logo" :src="`/storage/${webinar.header_logo}`" alt="Logos" class="h-[60px] w-auto">
-                                    <img v-else-if="client.logo" :src="`/storage/${client.logo}`" alt="Client Logo" class="h-[60px] w-auto">
+                                    <img
+                                        v-if="webinar.header_logo"
+                                        :src="`/storage/${webinar.header_logo}`"
+                                        alt="Logos"
+                                        :class="isSaseLanding ? 'w-auto max-w-full' : 'h-[60px] w-auto'"
+                                    >
+                                    <img
+                                        v-else-if="client.logo"
+                                        :src="`/storage/${client.logo}`"
+                                        alt="Client Logo"
+                                        :class="isSaseLanding ? 'w-auto max-w-full' : 'h-[60px] w-auto'"
+                                    >
                                 </div>
                                 <h1 v-if="webinar.show_title !== false" class="text-[#041B36] font-bold text-[34px] md:text-[38px] leading-[1.1] mb-3 font-roboto">
                                     {{ webinar.title }}
