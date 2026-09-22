@@ -8,6 +8,7 @@
     "require": {
         "php": "^8.2",
         "barryvdh/laravel-dompdf": "^3.1",
+        "darkaonline/l5-swagger": "^11.1",
         "facebook/php-business-sdk": "^24.0",
         "filament/filament": "^4.0",
         "inertiajs/inertia-laravel": "^2.0",

@@ -139,4 +139,42 @@ class ZoomService
         $data = $response->json();
         return $data['total_records'] ?? 0;
     }
+
+    /**
+     * Get full webinar participants list (paginated through Zoom's report API).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getWebinarParticipantsDetailed(string $webinarId): array
+    {
+        $token = $this->getAccessToken();
+        if (!$token) return [];
+
+        $participants = [];
+        $nextPageToken = null;
+
+        do {
+            $query = ['page_size' => 300];
+            if ($nextPageToken) {
+                $query['next_page_token'] = $nextPageToken;
+            }
+
+            $response = Http::withToken($token)
+                ->get("{$this->baseUrl}/report/webinars/{$webinarId}/participants", $query);
+
+            if ($response->failed()) {
+                Log::warning('Zoom Get Participants Detailed Failed', [
+                    'webinar_id' => $webinarId,
+                    'error' => $response->json(),
+                ]);
+                break;
+            }
+
+            $data = $response->json();
+            $participants = array_merge($participants, $data['participants'] ?? []);
+            $nextPageToken = $data['next_page_token'] ?? null;
+        } while (!empty($nextPageToken));
+
+        return $participants;
+    }
 }

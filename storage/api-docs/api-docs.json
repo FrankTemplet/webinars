@@ -1,0 +1,1023 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Templet Webinars API",
+        "description": "API de solo lectura para consultar submissions, asistentes y estadísticas de los webinars. Autenticación por API key en el header `X-Api-Key`.",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "/",
+            "description": "Servidor actual"
+        }
+    ],
+    "paths": {
+        "/api/v1/attendees": {
+            "get": {
+                "tags": [
+                    "Attendees"
+                ],
+                "summary": "Lista los asistentes reales (Zoom) de los webinars",
+                "description": "Participantes sincronizados desde los reportes de Zoom mediante `php artisan webinars:sync-attendees`. Incluye hora de entrada/salida y duración.",
+                "operationId": "listAttendees",
+                "parameters": [
+                    {
+                        "name": "client",
+                        "in": "query",
+                        "description": "Slug o ID del cliente",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "libertynet"
+                        }
+                    },
+                    {
+                        "name": "webinar_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "webinar_slug",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "campaign",
+                        "in": "query",
+                        "description": "Campaign Salesforce Field del webinar",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "description": "join_time desde (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "description": "join_time hasta (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "email",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "min_duration",
+                        "in": "query",
+                        "description": "Duración mínima en minutos",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 50
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Listado paginado de asistentes",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Attendee"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API key faltante o inválida"
+                    },
+                    "403": {
+                        "description": "La API key no tiene acceso a ese cliente"
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/stats": {
+            "get": {
+                "tags": [
+                    "Stats"
+                ],
+                "summary": "Estadísticas agregadas por webinar",
+                "description": "Métricas por webinar: registros, leads pagados vs orgánicos, asistencia real de Zoom, show-up rate, inversión en Meta Ads y CPL. Incluye un bloque `totals` con el agregado del filtro aplicado.",
+                "operationId": "getStats",
+                "parameters": [
+                    {
+                        "name": "client",
+                        "in": "query",
+                        "description": "Slug o ID del cliente",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "libertynet"
+                        }
+                    },
+                    {
+                        "name": "webinar_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "webinar_slug",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "campaign",
+                        "in": "query",
+                        "description": "Campaign Salesforce Field del webinar",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "description": "Fecha inicial (YYYY-MM-DD) aplicada a los registros",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "description": "Fecha final (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Estadísticas por webinar más totales",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/WebinarStats"
+                                            }
+                                        },
+                                        "totals": {
+                                            "$ref": "#/components/schemas/StatsTotals"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API key faltante o inválida"
+                    },
+                    "403": {
+                        "description": "La API key no tiene acceso a ese cliente"
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/stats/utm": {
+            "get": {
+                "tags": [
+                    "Stats"
+                ],
+                "summary": "Desglose de registros por UTM",
+                "description": "Cuenta de registros agrupada por el campo UTM elegido.",
+                "operationId": "getUtmStats",
+                "parameters": [
+                    {
+                        "name": "client",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "webinar_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "webinar_slug",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "campaign",
+                        "in": "query",
+                        "description": "Campaign Salesforce Field del webinar",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "field",
+                        "in": "query",
+                        "description": "Campo UTM a agrupar",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "utm_source",
+                            "enum": [
+                                "utm_source",
+                                "utm_medium",
+                                "utm_campaign",
+                                "utm_term",
+                                "utm_content"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Desglose por UTM",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "field": {
+                                            "type": "string",
+                                            "example": "utm_source"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "value": {
+                                                        "type": "string",
+                                                        "example": "paid",
+                                                        "nullable": true
+                                                    },
+                                                    "registrations": {
+                                                        "type": "integer",
+                                                        "example": 128
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/stats/timeseries": {
+            "get": {
+                "tags": [
+                    "Stats"
+                ],
+                "summary": "Serie temporal de registros",
+                "description": "Registros agrupados por día, semana o mes.",
+                "operationId": "getTimeseriesStats",
+                "parameters": [
+                    {
+                        "name": "client",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "webinar_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "webinar_slug",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "campaign",
+                        "in": "query",
+                        "description": "Campaign Salesforce Field del webinar",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "group_by",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "day",
+                            "enum": [
+                                "day",
+                                "week",
+                                "month"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Serie temporal",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "group_by": {
+                                            "type": "string",
+                                            "example": "day"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "period": {
+                                                        "type": "string",
+                                                        "example": "2026-09-22"
+                                                    },
+                                                    "registrations": {
+                                                        "type": "integer",
+                                                        "example": 14
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/submissions": {
+            "get": {
+                "tags": [
+                    "Submissions"
+                ],
+                "summary": "Lista los registros (submissions) de los webinars",
+                "description": "Devuelve los registros capturados en las landings de webinars, con filtros por cliente, webinar, campaña de Salesforce, fechas y UTM.",
+                "operationId": "listSubmissions",
+                "parameters": [
+                    {
+                        "name": "client",
+                        "in": "query",
+                        "description": "Slug o ID del cliente",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "libertynet"
+                        }
+                    },
+                    {
+                        "name": "webinar_id",
+                        "in": "query",
+                        "description": "ID del webinar",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "webinar_slug",
+                        "in": "query",
+                        "description": "Slug del webinar",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "campaign",
+                        "in": "query",
+                        "description": "Campaign Salesforce Field del webinar (campo `campaign`). Usado para enlazar con la campaña en Salesforce.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "7013h000000abcAAA"
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "description": "Fecha inicial (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "description": "Fecha final (YYYY-MM-DD)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "utm_source",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "utm_campaign",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Busca dentro del JSON `data` (nombre, email, etc.)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "registered_in_zoom",
+                        "in": "query",
+                        "description": "true = solo los registrados en Zoom, false = solo los no registrados",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Resultados por página (1-200, default 50)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 50
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Listado paginado de submissions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Submission"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "API key faltante o inválida"
+                    },
+                    "403": {
+                        "description": "La API key no tiene acceso a ese cliente"
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/submissions/{id}": {
+            "get": {
+                "tags": [
+                    "Submissions"
+                ],
+                "summary": "Detalle de un registro",
+                "operationId": "showSubmission",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Submission",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Submission"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "No encontrado"
+                    }
+                },
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Submission": {
+                "title": "Submission",
+                "description": "Registro capturado en la landing de un webinar.",
+                "properties": {
+                    "id": {
+                        "description": "Definiciones de los objetos que devuelve la API, solo para la documentación\nSwagger. Esta clase no se instancia en runtime.",
+                        "type": "integer",
+                        "example": 1421
+                    },
+                    "webinar": {
+                        "$ref": "#/components/schemas/WebinarRef"
+                    },
+                    "data": {
+                        "description": "Campos dinámicos definidos en el form_schema del webinar.",
+                        "type": "object",
+                        "example": {
+                            "name": "Ana",
+                            "last_name": "Pérez",
+                            "email": "ana@empresa.com",
+                            "phone": "+525512345678",
+                            "company": "Empresa SA"
+                        },
+                        "additionalProperties": true
+                    },
+                    "utm": {
+                        "properties": {
+                            "source": {
+                                "type": "string",
+                                "example": "paid",
+                                "nullable": true
+                            },
+                            "medium": {
+                                "type": "string",
+                                "example": "facebook",
+                                "nullable": true
+                            },
+                            "campaign": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "term": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "content": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "sent_to_clay_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "registered_in_zoom_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "Attendee": {
+                "title": "Attendee",
+                "description": "Asistente real al webinar, sincronizado desde los reportes de Zoom.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 88
+                    },
+                    "webinar": {
+                        "$ref": "#/components/schemas/WebinarRef"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Ana Pérez",
+                        "nullable": true
+                    },
+                    "email": {
+                        "type": "string",
+                        "example": "ana@empresa.com",
+                        "nullable": true
+                    },
+                    "join_time": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "leave_time": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "duration": {
+                        "description": "Duración en segundos",
+                        "type": "integer",
+                        "example": 2700
+                    },
+                    "duration_minutes": {
+                        "type": "integer",
+                        "example": 45
+                    },
+                    "device": {
+                        "type": "string",
+                        "example": "Windows",
+                        "nullable": true
+                    },
+                    "location": {
+                        "type": "string",
+                        "example": "Mexico City, Mexico",
+                        "nullable": true
+                    },
+                    "zoom_participant_id": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "WebinarRef": {
+                "title": "WebinarRef",
+                "description": "Referencia al webinar y su cliente.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 12
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "LibertyNet SASE"
+                    },
+                    "slug": {
+                        "type": "string",
+                        "example": "libertynet-sase"
+                    },
+                    "campaign_salesforce_field": {
+                        "description": "Campo `campaign` del webinar. Es el identificador con el que se enlaza la campaña en Salesforce.",
+                        "type": "string",
+                        "example": "7013h000000abcAAA",
+                        "nullable": true
+                    },
+                    "client": {
+                        "$ref": "#/components/schemas/ClientRef"
+                    }
+                },
+                "type": "object"
+            },
+            "ClientRef": {
+                "title": "ClientRef",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 3
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "LibertyNet"
+                    },
+                    "slug": {
+                        "type": "string",
+                        "example": "libertynet"
+                    }
+                },
+                "type": "object"
+            },
+            "WebinarStats": {
+                "title": "WebinarStats",
+                "description": "Métricas agregadas de un webinar.",
+                "properties": {
+                    "webinar": {
+                        "$ref": "#/components/schemas/WebinarRef"
+                    },
+                    "registrations": {
+                        "description": "Total de submissions",
+                        "type": "integer",
+                        "example": 320
+                    },
+                    "unique_registrations": {
+                        "description": "Submissions con email distinto",
+                        "type": "integer",
+                        "example": 298
+                    },
+                    "paid_leads": {
+                        "description": "Submissions con utm_source = paid",
+                        "type": "integer",
+                        "example": 180
+                    },
+                    "organic_registrations": {
+                        "description": "Submissions sin ningún UTM",
+                        "type": "integer",
+                        "example": 118
+                    },
+                    "registered_in_zoom": {
+                        "type": "integer",
+                        "example": 310
+                    },
+                    "sent_to_clay": {
+                        "type": "integer",
+                        "example": 290
+                    },
+                    "attendees": {
+                        "description": "Sesiones de asistencia registradas en Zoom",
+                        "type": "integer",
+                        "example": 142
+                    },
+                    "unique_attendees": {
+                        "description": "Asistentes con email distinto",
+                        "type": "integer",
+                        "example": 137
+                    },
+                    "show_up_rate": {
+                        "description": "unique_attendees / registrations * 100",
+                        "type": "number",
+                        "format": "float",
+                        "example": 42.81
+                    },
+                    "avg_attendance_minutes": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 38.5
+                    },
+                    "ad_spend": {
+                        "description": "Inversión sincronizada desde Meta Ads",
+                        "type": "number",
+                        "format": "float",
+                        "example": 1250.4
+                    },
+                    "cost_per_lead": {
+                        "description": "ad_spend / registrations",
+                        "type": "number",
+                        "format": "float",
+                        "example": 3.91
+                    },
+                    "last_ad_spend_sync_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "StatsTotals": {
+                "title": "StatsTotals",
+                "description": "Agregado de todos los webinars que cumplen el filtro.",
+                "properties": {
+                    "webinars": {
+                        "type": "integer",
+                        "example": 4
+                    },
+                    "registrations": {
+                        "type": "integer",
+                        "example": 1240
+                    },
+                    "unique_registrations": {
+                        "type": "integer",
+                        "example": 1180
+                    },
+                    "paid_leads": {
+                        "type": "integer",
+                        "example": 640
+                    },
+                    "organic_registrations": {
+                        "type": "integer",
+                        "example": 500
+                    },
+                    "attendees": {
+                        "type": "integer",
+                        "example": 520
+                    },
+                    "unique_attendees": {
+                        "type": "integer",
+                        "example": 505
+                    },
+                    "show_up_rate": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 40.73
+                    },
+                    "ad_spend": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 5400
+                    },
+                    "cost_per_lead": {
+                        "type": "number",
+                        "format": "float",
+                        "example": 4.35
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "ApiKeyAuth": {
+                "type": "apiKey",
+                "description": "API key generada con `php artisan api-key:create`.",
+                "name": "X-Api-Key",
+                "in": "header"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Attendees",
+            "description": "Attendees"
+        },
+        {
+            "name": "Stats",
+            "description": "Stats"
+        },
+        {
+            "name": "Submissions",
+            "description": "Submissions"
+        }
+    ]
+}
