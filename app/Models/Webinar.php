@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\ClientAccessScope;
 use Illuminate\Database\Eloquent\Model;
 
 class Webinar extends Model
@@ -21,6 +22,11 @@ class Webinar extends Model
         'chartable_fields' => 'array',
         'tracking_scripts' => 'array',
     ];
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new ClientAccessScope('client_id'));
+    }
 
     public function client()
     {

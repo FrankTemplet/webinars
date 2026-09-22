@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\ClientAccessScope;
 use Illuminate\Database\Eloquent\Model;
 
 class Submission extends Model
@@ -23,6 +24,11 @@ class Submission extends Model
         'sent_to_clay_at' => 'datetime',
         'registered_in_zoom_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new ClientAccessScope(null, 'webinar'));
+    }
 
     public function webinar()
     {

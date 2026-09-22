@@ -33,7 +33,16 @@ class UserResource extends Resource
                         User::ROLE_ADMIN => 'Administrador',
                         User::ROLE_VIEWER => 'Espectador (Solo Consultas)',
                     ])
-                    ->required(),
+                    ->required()
+                    ->live(),
+                Select::make('clients')
+                    ->label('Clientes visibles')
+                    ->relationship('clients', 'name')
+                    ->multiple()
+                    ->preload()
+                    ->searchable()
+                    ->helperText('Deja vacío para que vea todos los clientes.')
+                    ->visible(fn ($get): bool => $get('role') === User::ROLE_VIEWER),
                 TextInput::make('password')
                     ->password()
                     ->dehydrated(fn ($state) => filled($state))
@@ -56,6 +65,10 @@ class UserResource extends Resource
                         User::ROLE_VIEWER => 'gray',
                         default => 'gray',
                     }),
+                TextColumn::make('clients.name')
+                    ->label('Clientes')
+                    ->badge()
+                    ->placeholder('Todos'),
                 TextColumn::make('last_login_at')
                     ->label('Última conexión')
                     ->dateTime()

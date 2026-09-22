@@ -6,8 +6,10 @@ namespace App\Models;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable implements FilamentUser
@@ -27,6 +29,9 @@ class User extends Authenticatable implements FilamentUser
         'role',
     ];
 
+    /** @var array<int, int>|null Cache por request de allowedClientIds(). */
+    protected ?array $allowedClientIds = null;
+
     public const ROLE_ADMIN = 'admin';
     public const ROLE_VIEWER = 'viewer';
 
@@ -38,6 +43,31 @@ class User extends Authenticatable implements FilamentUser
     public function isViewer(): bool
     {
         return $this->role === self::ROLE_VIEWER;
+    }
+
+    /**
+     * Clientes que el admin le asignó a este usuario.
+     */
+    public function clients(): BelongsToMany
+    {
+        return $this->belongsToMany(Client::class);
+    }
+
+    /**
+     * IDs de los clientes visibles para este usuario.
+     * Vacío significa sin restricción (ve todos).
+     *
+     * @return array<int, int>
+     */
+    public function allowedClientIds(): array
+    {
+        // Se consulta el pivote directamente para no disparar los global scopes
+        // de Client (que a su vez llaman a este método).
+        return $this->allowedClientIds ??= DB::table('client_user')
+            ->where('user_id', $this->getKey())
+            ->pluck('client_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 
     /**
