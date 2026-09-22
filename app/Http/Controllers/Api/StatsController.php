@@ -16,7 +16,12 @@ class StatsController extends ApiController
      * El nombre del campo de email varía entre formularios; se toma el primero
      * que exista dentro del JSON `data`.
      */
-    private const EMAIL_EXPR = "COALESCE(data->>'\$.email', data->>'\$.correo', data->>'\$.Email', data->>'\$.email_address')";
+    private const EMAIL_EXPR = "COALESCE(
+        JSON_UNQUOTE(JSON_EXTRACT(data, '\$.email')),
+        JSON_UNQUOTE(JSON_EXTRACT(data, '\$.correo')),
+        JSON_UNQUOTE(JSON_EXTRACT(data, '\$.Email')),
+        JSON_UNQUOTE(JSON_EXTRACT(data, '\$.email_address'))
+    )";
 
     #[OA\Get(
         path: '/api/v1/stats',
@@ -68,7 +73,7 @@ class StatsController extends ApiController
             $registrations = (clone $submissions)->count();
             $uniqueEmails = (clone $submissions)
                 ->selectRaw(self::EMAIL_EXPR.' as email_value')
-                ->whereRaw(self::EMAIL_EXPR.' is not null')
+                ->whereRaw(self::EMAIL_EXPR.' is not null and '.self::EMAIL_EXPR." <> ''")
                 ->distinct()
                 ->count(\Illuminate\Support\Facades\DB::raw(self::EMAIL_EXPR));
             $paidLeads = (clone $submissions)->where('utm_source', 'paid')->count();

@@ -21,6 +21,8 @@ class Webinar extends Model
         'form_schema' => 'array',
         'chartable_fields' => 'array',
         'tracking_scripts' => 'array',
+        'ad_spend' => 'float',
+        'last_ad_spend_sync_at' => 'datetime',
     ];
 
     protected static function booted(): void
