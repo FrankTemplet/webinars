@@ -17,6 +17,9 @@ npm run build
 echo "Migrations..."
 php artisan migrate --force
 
+echo "Generating Swagger docs..."
+php artisan l5-swagger:generate
+
 echo "Optimizing..."
 php artisan config:cache
 php artisan route:cache
