@@ -43,6 +43,7 @@ Para revocar: poner `revoked_at` en el registro de `api_keys`.
 | GET | `/api/v1/stats` | Métricas por webinar + totales |
 | GET | `/api/v1/stats/utm` | Registros agrupados por campo UTM |
 | GET | `/api/v1/stats/timeseries` | Registros por día / semana / mes |
+| GET | `/api/v1/stats/domains` | Composición de la asistencia por dominio de correo |
 
 Filtros comunes: `client` (slug o ID), `webinar_id`, `webinar_slug`,
 `campaign`, `from`, `to`, `per_page`, `page`.
@@ -59,6 +60,28 @@ curl -H "X-Api-Key: $KEY" \
   "https://<host>/api/v1/submissions?campaign=7013h000000abcAAA"
 ```
 
+## Audiencia externa vs. interna
+
+Los organizadores, ponentes y la gente del propio cliente se conectan al webinar
+y quedan en `attendees`. Contarlos como audiencia infla el número: en el webinar
+9, 36 de 225 asistentes únicos eran internos.
+
+`/stats` devuelve las tres cifras por separado en lugar de filtrar a escondidas:
+`unique_attendees`, `unique_attendees_external` y `unique_attendees_internal`
+(igual para registros). `show_up_rate` y `cost_per_lead` se calculan **sobre
+externos**, y cada fila incluye `internal_domains` con los patrones aplicados.
+
+Qué se considera interno:
+
+- Nuestros dominios, en `config/webinars.php` → `internal_domains`.
+- Los del cliente, en su ficha del admin (campo "Dominios de correo internos",
+  guardado en `clients.internal_email_domains`).
+
+Un patrocinador o ponente externo (ej. `amazon.com`) **no** va en esas listas:
+aparece en `/stats/domains` con `internal: false` y lo decide quien lee el
+reporte. Filtrar a ciegas fue justo el origen del bug que tenía el dashboard,
+donde la lista escrita a mano decía `liberynet` sin la b y nunca excluyó nada.
+
 ## Asistentes (Zoom)
 
 Los asistentes se guardan en la tabla `attendees`. La sincronización corre cada
@@ -71,6 +94,12 @@ php artisan webinars:sync-attendees --webinar=12
 
 Solo se sincronizan los webinars con `zoom_webinar_id`, y Zoom publica el
 reporte de participantes cuando el webinar ya terminó.
+
+El reporte de Zoom devuelve `name`, `user_email`, `join_time`, `leave_time`,
+`duration` y `status`. **No** devuelve ubicación ni dispositivo: las columnas
+`location`, `ip_address` y `device` de `attendees` quedan vacías (806 de 806
+filas al momento de escribir esto), así que no se exponen en la API. Las
+columnas se conservan por si un plan o scope distinto las llena.
 
 ## Regenerar la documentación
 

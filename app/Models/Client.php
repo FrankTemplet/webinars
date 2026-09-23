@@ -9,7 +9,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Client extends Model
 {
-    protected $fillable = ['name', 'slug', 'logo', 'meta_ad_account_id', 'meta_access_token'];
+    protected $fillable = ['name', 'slug', 'logo', 'internal_email_domains', 'meta_ad_account_id', 'meta_access_token'];
+
+    protected $casts = [
+        'internal_email_domains' => 'array',
+    ];
 
     protected static function booted(): void
     {

@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Models\Attendee;
 use App\Models\Submission;
 use App\Models\Webinar;
+use App\Support\InternalEmailDomains;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use OpenApi\Attributes as OA;
 
 class StatsController extends ApiController
@@ -70,12 +72,13 @@ class StatsController extends ApiController
                 $submissions->whereDate('created_at', '<=', $to);
             }
 
+            $domains = InternalEmailDomains::for($webinar->client);
+
             $registrations = (clone $submissions)->count();
-            $uniqueEmails = (clone $submissions)
-                ->selectRaw(self::EMAIL_EXPR.' as email_value')
-                ->whereRaw(self::EMAIL_EXPR.' is not null and '.self::EMAIL_EXPR." <> ''")
-                ->distinct()
-                ->count(\Illuminate\Support\Facades\DB::raw(self::EMAIL_EXPR));
+            $uniqueEmails = $this->countUniqueEmails(clone $submissions);
+            $uniqueExternal = $this->countUniqueEmails(
+                InternalEmailDomains::scopeExternal(clone $submissions, self::EMAIL_EXPR, $domains)
+            );
             $paidLeads = (clone $submissions)->where('utm_source', 'paid')->count();
             $organic = (clone $submissions)
                 ->whereNull('utm_source')
@@ -89,7 +92,9 @@ class StatsController extends ApiController
 
             $attendees = Attendee::withoutGlobalScopes()->where('webinar_id', $webinar->id);
             $attendeesTotal = (clone $attendees)->count();
-            $attendeesUnique = (clone $attendees)->distinct()->count('email');
+            $attendeesUnique = (clone $attendees)->distinct()->count(DB::raw('LOWER(email)'));
+            $attendeesExternal = InternalEmailDomains::scopeExternal(clone $attendees, 'email', $domains)
+                ->distinct()->count(DB::raw('LOWER(email)'));
             $avgDuration = (float) ((clone $attendees)->avg('duration') ?? 0);
 
             $adSpend = (float) ($webinar->ad_spend ?? 0);
@@ -110,39 +115,60 @@ class StatsController extends ApiController
                 ],
                 'registrations' => $registrations,
                 'unique_registrations' => $uniqueEmails,
+                'unique_registrations_external' => $uniqueExternal,
+                'unique_registrations_internal' => $uniqueEmails - $uniqueExternal,
                 'paid_leads' => $paidLeads,
                 'organic_registrations' => $organic,
                 'registered_in_zoom' => $registeredInZoom,
                 'sent_to_clay' => $sentToClay,
                 'attendees' => $attendeesTotal,
                 'unique_attendees' => $attendeesUnique,
-                'show_up_rate' => $registrations > 0 ? round($attendeesUnique / $registrations * 100, 2) : 0.0,
+                'unique_attendees_external' => $attendeesExternal,
+                'unique_attendees_internal' => $attendeesUnique - $attendeesExternal,
+                'show_up_rate' => $uniqueExternal > 0 ? round($attendeesExternal / $uniqueExternal * 100, 2) : 0.0,
                 'avg_attendance_minutes' => round($avgDuration / 60, 2),
                 'ad_spend' => round($adSpend, 2),
-                'cost_per_lead' => $registrations > 0 ? round($adSpend / $registrations, 2) : 0.0,
+                'cost_per_lead' => $uniqueExternal > 0 ? round($adSpend / $uniqueExternal, 2) : 0.0,
                 'last_ad_spend_sync_at' => $webinar->last_ad_spend_sync_at?->toIso8601String(),
+                'internal_domains' => $domains,
             ];
         })->values();
 
-        $totalRegistrations = $rows->sum('registrations');
-        $totalAttendees = $rows->sum('unique_attendees');
+        $totalUniqueExternal = $rows->sum('unique_registrations_external');
+        $totalAttendeesExternal = $rows->sum('unique_attendees_external');
         $totalSpend = $rows->sum('ad_spend');
 
         return response()->json([
             'data' => $rows,
             'totals' => [
                 'webinars' => $rows->count(),
-                'registrations' => $totalRegistrations,
+                'registrations' => $rows->sum('registrations'),
                 'unique_registrations' => $rows->sum('unique_registrations'),
+                'unique_registrations_external' => $totalUniqueExternal,
+                'unique_registrations_internal' => $rows->sum('unique_registrations_internal'),
                 'paid_leads' => $rows->sum('paid_leads'),
                 'organic_registrations' => $rows->sum('organic_registrations'),
                 'attendees' => $rows->sum('attendees'),
-                'unique_attendees' => $totalAttendees,
-                'show_up_rate' => $totalRegistrations > 0 ? round($totalAttendees / $totalRegistrations * 100, 2) : 0.0,
+                'unique_attendees' => $rows->sum('unique_attendees'),
+                'unique_attendees_external' => $totalAttendeesExternal,
+                'unique_attendees_internal' => $rows->sum('unique_attendees_internal'),
+                'show_up_rate' => $totalUniqueExternal > 0 ? round($totalAttendeesExternal / $totalUniqueExternal * 100, 2) : 0.0,
                 'ad_spend' => round($totalSpend, 2),
-                'cost_per_lead' => $totalRegistrations > 0 ? round($totalSpend / $totalRegistrations, 2) : 0.0,
+                'cost_per_lead' => $totalUniqueExternal > 0 ? round($totalSpend / $totalUniqueExternal, 2) : 0.0,
             ],
         ]);
+    }
+
+    /**
+     * Cuenta correos distintos dentro del JSON `data`, ignorando vacíos.
+     */
+    protected function countUniqueEmails(Builder $query): int
+    {
+        return $query
+            ->whereRaw(self::EMAIL_EXPR.' is not null')
+            ->whereRaw(self::EMAIL_EXPR." <> ''")
+            ->distinct()
+            ->count(DB::raw('LOWER('.self::EMAIL_EXPR.')'));
     }
 
     #[OA\Get(
@@ -266,6 +292,69 @@ class StatsController extends ApiController
             ]);
 
         return response()->json(['group_by' => $groupBy, 'data' => $rows]);
+    }
+
+    #[OA\Get(
+        path: '/api/v1/stats/domains',
+        operationId: 'getDomainStats',
+        summary: 'Composición de la asistencia por dominio de correo',
+        description: 'Dominios de los asistentes con su conteo, marcando cuáles son internos (nuestra gente y la del cliente). Sirve para ver de qué está hecha la audiencia sin filtrar nada a ciegas: los organizadores y ponentes quedan visibles en lugar de escondidos.',
+        tags: ['Stats'],
+        security: [['ApiKeyAuth' => []]],
+        parameters: [
+            new OA\Parameter(name: 'client', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'webinar_id', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'webinar_slug', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'campaign', in: 'query', description: 'Campaign Salesforce Field del webinar', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'limit', in: 'query', description: 'Máximo de dominios (1-200, default 50)', required: false, schema: new OA\Schema(type: 'integer', default: 50)),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Dominios de los asistentes', content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(property: 'internal_domains', type: 'array', items: new OA\Items(type: 'string'), description: 'Patrones considerados internos'),
+                    new OA\Property(property: 'data', type: 'array', items: new OA\Items(
+                        properties: [
+                            new OA\Property(property: 'domain', type: 'string', example: 'libertynet.com'),
+                            new OA\Property(property: 'unique_attendees', type: 'integer', example: 33),
+                            new OA\Property(property: 'internal', type: 'boolean', example: true),
+                        ], type: 'object'
+                    )),
+                ]
+            )),
+        ],
+    )]
+    public function domains(Request $request): JsonResponse
+    {
+        $webinars = $this->webinarQuery($request)->with('client')->get();
+
+        $domains = $webinars
+            ->map(fn (Webinar $w) => InternalEmailDomains::for($w->client))
+            ->flatten()
+            ->unique()
+            ->values()
+            ->all();
+
+        $limit = min(max((int) $request->query('limit', 50), 1), 200);
+
+        $rows = Attendee::withoutGlobalScopes()
+            ->whereIn('webinar_id', $webinars->pluck('id'))
+            ->whereNotNull('email')
+            ->where('email', '<>', '')
+            ->selectRaw("LOWER(SUBSTRING_INDEX(email, '@', -1)) as domain, COUNT(DISTINCT LOWER(email)) as unique_attendees")
+            ->groupBy('domain')
+            ->orderByDesc('unique_attendees')
+            ->limit($limit)
+            ->get()
+            ->map(fn ($row) => [
+                'domain' => $row->domain,
+                'unique_attendees' => (int) $row->unique_attendees,
+                'internal' => InternalEmailDomains::isInternal('x@'.$row->domain, $domains),
+            ]);
+
+        return response()->json([
+            'internal_domains' => $domains,
+            'data' => $rows,
+        ]);
     }
 
     /**

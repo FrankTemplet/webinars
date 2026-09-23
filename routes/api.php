@@ -26,4 +26,5 @@ Route::prefix('v1')
         Route::get('stats', [StatsController::class, 'index']);
         Route::get('stats/utm', [StatsController::class, 'utm']);
         Route::get('stats/timeseries', [StatsController::class, 'timeseries']);
+        Route::get('stats/domains', [StatsController::class, 'domains']);
     });

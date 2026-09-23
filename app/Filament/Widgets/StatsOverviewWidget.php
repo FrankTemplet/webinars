@@ -2,13 +2,16 @@
 
 namespace App\Filament\Widgets;
 
+use App\Models\Client;
 use App\Models\Submission;
 use App\Models\Webinar;
 use App\Services\ZoomService;
+use App\Support\InternalEmailDomains;
+use Carbon\Carbon;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class StatsOverviewWidget extends BaseWidget
 {
@@ -16,18 +19,19 @@ class StatsOverviewWidget extends BaseWidget
 
     protected static ?int $sort = 1;
 
-    protected int | string | array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 'full';
 
     protected function getColumns(): int
     {
         // Retornar el número de columnas basado en cuántos stats vamos a mostrar
         $webinarId = $this->filters['webinar_id'] ?? null;
 
-        if (!$webinarId) {
+        if (! $webinarId) {
             return 1; // Una columna para el mensaje
         }
 
         $webinar = Webinar::find($webinarId);
+
         return 2;
     }
 
@@ -53,12 +57,20 @@ class StatsOverviewWidget extends BaseWidget
             $query->whereHas('webinar', fn ($q) => $q->where('client_id', $clientId));
         }
 
-        $totalSubmissions = $query
-            ->where('data->email', 'not like', '%@%templet%')
-            ->where('data->email', 'not like', '%@%cwc%')
-            ->where('data->email', 'not like', '%@%liberynet%')
-            ->distinct('data->email')
-            ->count('data->email');
+        // Dominios internos del cliente seleccionado (o solo los nuestros si no
+        // hay filtro). Antes la lista estaba escrita a mano aquí y decía
+        // 'liberynet' sin la b, así que nunca excluyó a LibertyNet.
+        $client = $clientId
+            ? Client::withoutGlobalScopes()->find($clientId)
+            : ($webinarId ? Webinar::withoutGlobalScopes()->find($webinarId)?->client : null);
+
+        $internalDomains = InternalEmailDomains::for($client);
+
+        $emailExpr = "JSON_UNQUOTE(JSON_EXTRACT(data, '\$.email'))";
+
+        $totalSubmissions = InternalEmailDomains::scopeExternal((clone $query), $emailExpr, $internalDomains)
+            ->distinct()
+            ->count(DB::raw("LOWER({$emailExpr})"));
 
         // Submissions sin utm
         $submissionUtmBlanks = (clone $query)
@@ -70,7 +82,7 @@ class StatsOverviewWidget extends BaseWidget
             ->count();
 
         // Si no hay webinar seleccionado, mostrar mensaje
-        if (!$webinarId) {
+        if (! $webinarId) {
             return [
                 Stat::make('Select a Webinar to View Statistics', '')
                     ->description('Please select a webinar from the filters above to view detailed metrics including registrations, leads, attendance, and Meta Ads insights.')
@@ -82,7 +94,7 @@ class StatsOverviewWidget extends BaseWidget
 
         // Obtener el webinar seleccionado
         $webinar = Webinar::find($webinarId);
-        if (!$webinar) {
+        if (! $webinar) {
             return [
                 Stat::make('Webinar not found', 'The selected webinar could not be found')
                     ->description('Please select a valid webinar')
@@ -131,12 +143,12 @@ class StatsOverviewWidget extends BaseWidget
                 ->descriptionIcon('heroicon-m-user-group')
                 ->color('info'),
 
-            Stat::make('Total Ad Spend', '$' . number_format($totalAdSpend, 2))
+            Stat::make('Total Ad Spend', '$'.number_format($totalAdSpend, 2))
                 ->description('Synced from Meta Ads')
                 ->descriptionIcon('heroicon-m-currency-dollar')
                 ->color('warning'),
 
-            Stat::make('Cost Per Lead (CPL)', '$' . number_format($cpl, 2))
+            Stat::make('Cost Per Lead (CPL)', '$'.number_format($cpl, 2))
                 ->description('Spend / Registrations')
                 ->descriptionIcon('heroicon-m-chart-bar')
                 ->color($cpl < 10 ? 'success' : 'danger'),

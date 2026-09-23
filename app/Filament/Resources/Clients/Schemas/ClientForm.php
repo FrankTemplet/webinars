@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Clients\Schemas;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 
@@ -22,6 +23,11 @@ class ClientForm
                     ->image()
                     ->disk('public')
                     ->directory('clients/logos'),
+                TagsInput::make('internal_email_domains')
+                    ->label('Dominios de correo internos')
+                    ->helperText('Correos del propio cliente (organizadores, ponentes). No cuentan como leads en los conteos externos. Ej: libertynet.com')
+                    ->placeholder('libertynet.com')
+                    ->columnSpanFull(),
                 TextInput::make('meta_ad_account_id')
                     ->label('Meta Ad Account ID')
                     ->helperText('Override the global Ad Account ID. Format: act_123456789')

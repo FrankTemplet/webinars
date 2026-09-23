@@ -28,8 +28,6 @@ class AttendeeResource extends JsonResource
             'leave_time' => $this->leave_time?->toIso8601String(),
             'duration' => $this->duration,
             'duration_minutes' => (int) round($this->duration / 60),
-            'device' => $this->device,
-            'location' => $this->location,
             'zoom_participant_id' => $this->zoom_participant_id,
         ];
     }
