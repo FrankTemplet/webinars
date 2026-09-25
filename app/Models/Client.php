@@ -30,6 +30,11 @@ class Client extends Model
         return $this->hasMany(Webinar::class);
     }
 
+    public function surveys(): HasMany
+    {
+        return $this->hasMany(Survey::class);
+    }
+
     public function socialMedia(): HasMany
     {
         return $this->hasMany(SocialMediaLink::class);

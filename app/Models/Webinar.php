@@ -39,4 +39,9 @@ class Webinar extends Model
     {
         return $this->hasMany(Submission::class);
     }
+
+    public function surveys()
+    {
+        return $this->hasMany(Survey::class);
+    }
 }

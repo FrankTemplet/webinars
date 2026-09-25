@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\SurveyController;
 use App\Http\Controllers\WebinarController;
 use Illuminate\Support\Facades\Route;
 
@@ -34,6 +35,12 @@ Route::middleware(['web', \App\Http\Middleware\DetectClientFromDomain::class])
 
         Route::get('/webinars/{slug}/thank-you', [WebinarController::class, 'thankYou'])
             ->name('webinar.thankyou');
+
+        Route::get('/surveys/{slug}', [SurveyController::class, 'show'])
+            ->name('survey.show');
+
+        Route::post('/surveys/{slug}', [SurveyController::class, 'store'])
+            ->name('survey.store');
     });
 
 /*
@@ -47,6 +54,12 @@ Route::middleware(['web', \App\Http\Middleware\DetectClientFromDomain::class])
 */
 
 Route::prefix('{client}')->group(function () {
+    Route::get('/surveys/{slug}', [SurveyController::class, 'show'])
+        ->name('survey.show.local');
+
+    Route::post('/surveys/{slug}', [SurveyController::class, 'store'])
+        ->name('survey.store.local');
+
     Route::get('/{slug}', [WebinarController::class, 'show'])
         ->name('webinar.show.local');
 
