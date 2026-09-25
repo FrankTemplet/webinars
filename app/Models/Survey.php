@@ -21,6 +21,17 @@ class Survey extends Model
         'q5_label' => '¿Hay alguien más de tu equipo u organización a quien quisieras invitar a esta sesión o que pueda estar interesado en conocer más sobre este tema?',
     ];
 
+    /**
+     * Copia de interfaz por defecto. Cada encuesta puede sobreescribirla.
+     */
+    public const DEFAULT_COPY = [
+        'contact_title' => 'Déjanos tus datos',
+        'contact_description' => 'Los usamos únicamente para dar seguimiento a tus respuestas.',
+        'submit_label' => 'Enviar',
+        'yes_label' => 'Si',
+        'no_label' => 'No',
+    ];
+
     public const DEFAULT_STAGES = [
         'Exploración inicial',
         'Evaluación de soluciones',
@@ -29,10 +40,11 @@ class Survey extends Model
     ];
 
     protected $fillable = [
-        'client_id', 'webinar_id', 'title', 'slug', 'subtitle', 'intro',
+        'client_id', 'webinar_id', 'title', 'slug', 'intro',
         'hero_image', 'header_logo', 'accent_color', 'accent_text_color', 'meta_title', 'meta_description',
-        'q1_label', 'q2_label', 'q3_label', 'q3_options', 'q4_label', 'q5_label',
-        'guests_count', 'contact_enabled', 'extra_questions', 'is_open', 'closed_message',
+        'q1_label', 'q2_label', 'q3_label', 'q3_options', 'q4_label', 'yes_label', 'no_label', 'q5_label',
+        'guests_count', 'contact_enabled', 'contact_title', 'contact_description', 'submit_label',
+        'extra_questions', 'is_open', 'closed_message',
         'thank_you_title', 'thank_you_message',
     ];
 
@@ -97,6 +109,14 @@ class Survey extends Model
     }
 
     /**
+     * Texto de interfaz, con el valor por defecto como respaldo.
+     */
+    public function copy(string $key): string
+    {
+        return filled($this->{$key}) ? $this->{$key} : (self::DEFAULT_COPY[$key] ?? '');
+    }
+
+    /**
      * Preguntas adicionales normalizadas, descartando las que quedaron sin
      * nombre o sin enunciado en el repeater del admin.
      *
@@ -127,8 +147,7 @@ class Survey extends Model
 
         return [
             'slug' => $this->slug,
-            'title' => $this->title,
-            'subtitle' => $this->subtitle,
+            // `title` es el nombre interno del panel: no se expone a la página.
             'intro' => $this->intro,
             'hero_image' => $this->hero_image,
             'header_logo' => $this->header_logo,
@@ -142,6 +161,13 @@ class Survey extends Model
             'thank_you_message' => $this->thank_you_message,
             'guests_count' => $guestsCount,
             'contact_enabled' => $this->contact_enabled,
+            'copy' => [
+                'contact_title' => $this->copy('contact_title'),
+                'contact_description' => $this->copy('contact_description'),
+                'submit_label' => $this->copy('submit_label'),
+                'yes_label' => $this->copy('yes_label'),
+                'no_label' => $this->copy('no_label'),
+            ],
             'questions' => [
                 'q1' => $this->question('q1_label'),
                 'q2' => $this->question('q2_label'),

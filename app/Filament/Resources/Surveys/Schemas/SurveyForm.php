@@ -39,7 +39,8 @@ class SurveyForm
                     ->searchable()
                     ->nullable(),
                 TextInput::make('title')
-                    ->label('Title')
+                    ->label('Internal Name')
+                    ->helperText('Only used to find this survey in the admin, exports and filters. It is never shown on the page.')
                     ->required()
                     ->maxLength(255)
                     ->live(onBlur: true)
@@ -48,9 +49,6 @@ class SurveyForm
                     ->required()
                     ->maxLength(255)
                     ->helperText('The survey is published at /surveys/{slug}'),
-                TextInput::make('subtitle')
-                    ->label('Subtitle')
-                    ->maxLength(255),
                 Toggle::make('is_open')
                     ->label('Open')
                     ->helperText('When disabled, the page stops accepting responses.')
@@ -63,8 +61,12 @@ class SurveyForm
                     ->visible(fn (Get $get) => ! $get('is_open'))
                     ->columnSpanFull(),
                 RichEditor::make('intro')
-                    ->label('Intro')
-                    ->helperText('Shown above the questions.')
+                    ->label('Content')
+                    ->helperText('Everything shown above the questions: heading, intro paragraphs and any links.')
+                    ->toolbarButtons([
+                        'h2', 'h3', 'bold', 'italic', 'link',
+                        'bulletList', 'orderedList', 'undo', 'redo',
+                    ])
                     ->columnSpanFull(),
                 FileUpload::make('hero_image')
                     ->label('Header Image')
@@ -127,6 +129,14 @@ class SurveyForm
                             ->placeholder(Survey::DEFAULT_QUESTIONS['q4_label'])
                             ->maxLength(255)
                             ->columnSpanFull(),
+                        TextInput::make('yes_label')
+                            ->label('4. "Yes" option')
+                            ->placeholder(Survey::DEFAULT_COPY['yes_label'])
+                            ->maxLength(60),
+                        TextInput::make('no_label')
+                            ->label('4. "No" option')
+                            ->placeholder(Survey::DEFAULT_COPY['no_label'])
+                            ->maxLength(60),
                         TextInput::make('q5_label')
                             ->label('5. Suggested guests')
                             ->placeholder(Survey::DEFAULT_QUESTIONS['q5_label'])
@@ -143,13 +153,29 @@ class SurveyForm
                     ->columnSpanFull()
                     ->collapsible(),
 
-                Section::make('Contact Block')
-                    ->description('The name, email and phone fields shown above the questions.')
+                Section::make('Contact Block & Button')
+                    ->description('The contact fields shown above the questions, and the submit button. Leave any text empty to use the default.')
                     ->schema([
                         Toggle::make('contact_enabled')
                             ->label('Ask for contact details')
                             ->helperText('Turn off to collect anonymous responses.')
+                            ->live()
                             ->default(true),
+                        TextInput::make('contact_title')
+                            ->label('Heading')
+                            ->placeholder(Survey::DEFAULT_COPY['contact_title'])
+                            ->maxLength(255)
+                            ->visible(fn (Get $get) => (bool) $get('contact_enabled')),
+                        TextInput::make('contact_description')
+                            ->label('Description')
+                            ->placeholder(Survey::DEFAULT_COPY['contact_description'])
+                            ->maxLength(255)
+                            ->visible(fn (Get $get) => (bool) $get('contact_enabled'))
+                            ->columnSpanFull(),
+                        TextInput::make('submit_label')
+                            ->label('Submit button')
+                            ->placeholder(Survey::DEFAULT_COPY['submit_label'])
+                            ->maxLength(60),
                     ])
                     ->columnSpanFull()
                     ->collapsible(),

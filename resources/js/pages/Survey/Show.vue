@@ -24,10 +24,16 @@ interface ExtraQuestion {
     options: string[];
 }
 
+interface SurveyCopy {
+    contact_title: string;
+    contact_description: string;
+    submit_label: string;
+    yes_label: string;
+    no_label: string;
+}
+
 interface Survey {
     slug: string;
-    title: string;
-    subtitle?: string;
     intro?: string;
     hero_image?: string;
     header_logo?: string;
@@ -41,6 +47,7 @@ interface Survey {
     thank_you_message?: string;
     guests_count: number;
     contact_enabled: boolean;
+    copy: SurveyCopy;
     questions: { q1: string; q2: string; q3: string; q4: string; q5: string };
     stage_options: string[];
     extra_questions: ExtraQuestion[];
@@ -125,7 +132,7 @@ const submit = (): void => {
 </script>
 
 <template>
-    <Head :title="survey.meta_title || survey.title">
+    <Head :title="survey.meta_title || client.name">
         <meta name="description" :content="survey.meta_description || ''" />
         <link v-if="client.logo" rel="icon" type="image/x-icon" :href="`/storage/${client.logo}`" />
         <link rel="preconnect" href="https://fonts.bunny.net" />
@@ -147,9 +154,7 @@ const submit = (): void => {
         <!-- Intro -->
         <main class="py-6">
             <div class="survey-container">
-                <h1 class="title mb-3">{{ survey.title }}</h1>
-                <p v-if="survey.subtitle" class="lead lead--strong mb-3">{{ survey.subtitle }}</p>
-                <div v-if="survey.intro" class="lead survey-intro" v-html="survey.intro"></div>
+                <div v-if="survey.intro" class="survey-intro" v-html="survey.intro"></div>
             </div>
         </main>
 
@@ -178,8 +183,8 @@ const submit = (): void => {
             <section v-if="survey.contact_enabled" class="pt-5 mb-4">
                 <div class="survey-container">
                     <div class="box-card">
-                        <p class="title-box mb-1">Déjanos tus datos</p>
-                        <p class="lead mb-3">Los usamos únicamente para dar seguimiento a tus respuestas.</p>
+                        <p class="title-box mb-1">{{ survey.copy.contact_title }}</p>
+                        <p class="lead mb-3">{{ survey.copy.contact_description }}</p>
                         <div class="field-row">
                             <div class="field">
                                 <input
@@ -300,7 +305,7 @@ const submit = (): void => {
                                 name="quiereRevision"
                                 :value="true"
                             />
-                            <label class="form-check-label" for="revisionSi">Si</label>
+                            <label class="form-check-label" for="revisionSi">{{ survey.copy.yes_label }}</label>
                         </div>
                         <div class="form-check">
                             <input
@@ -311,7 +316,7 @@ const submit = (): void => {
                                 name="quiereRevision"
                                 :value="false"
                             />
-                            <label class="form-check-label" for="revisionNo">No</label>
+                            <label class="form-check-label" for="revisionNo">{{ survey.copy.no_label }}</label>
                         </div>
                     </div>
                 </div>
@@ -412,7 +417,7 @@ const submit = (): void => {
                                 class="form-check-input"
                                 type="checkbox"
                             />
-                            <label class="form-check-label" :for="`extra_${question.name}`">Si</label>
+                            <label class="form-check-label" :for="`extra_${question.name}`">{{ survey.copy.yes_label }}</label>
                         </div>
 
                         <template v-else-if="question.type === 'rating'">
@@ -447,7 +452,7 @@ const submit = (): void => {
                 <div class="survey-container text-center">
                     <p v-if="errorFor('survey')" class="field-error mb-3">{{ errorFor('survey') }}</p>
                     <button type="submit" class="btn btn-primary" :disabled="form.processing">
-                        {{ form.processing ? 'Enviando...' : 'Enviar' }}
+                        {{ form.processing ? 'Enviando...' : survey.copy.submit_label }}
                     </button>
                 </div>
             </section>
@@ -535,9 +540,24 @@ const submit = (): void => {
     font-size: 1rem;
     margin: 0;
 }
-.lead--strong { font-weight: 700; }
-.survey-intro :deep(p) { margin: 0 0 1rem; }
+.survey-intro :deep(h1),
+.survey-intro :deep(h2),
+.survey-intro :deep(h3) {
+    color: #020e1e;
+    font-size: 25px;
+    line-height: 1.1;
+    font-weight: 800;
+    margin: 0 0 1rem;
+}
+.survey-intro :deep(p) {
+    color: #1a1a1a;
+    font-size: 1rem;
+    margin: 0 0 1rem;
+}
 .survey-intro :deep(p:last-child) { margin-bottom: 0; }
+.survey-intro :deep(ul),
+.survey-intro :deep(ol) { margin: 0 0 1rem; }
+.survey-intro :deep(a) { color: var(--accent); }
 
 hr {
     opacity: 1;

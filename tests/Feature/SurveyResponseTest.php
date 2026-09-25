@@ -21,7 +21,7 @@ class SurveyResponseTest extends TestCase
 
         $survey = Survey::create(array_merge([
             'client_id' => $client->id,
-            'title' => 'Test Survey',
+            'title' => 'Encuesta interna de prueba',
             'slug' => 'test-survey',
         ], $attributes));
 
@@ -38,6 +38,40 @@ class SurveyResponseTest extends TestCase
                 ->where('survey.slug', $survey->slug)
                 ->where('survey.guests_count', 3)
                 ->has('survey.stage_options', 4));
+    }
+
+    public function test_internal_name_is_never_sent_to_the_public_page(): void
+    {
+        [$client, $survey] = $this->createSurvey();
+
+        $this->get("/{$client->slug}/surveys/{$survey->slug}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->missing('survey.title'))
+            ->assertDontSee('Encuesta interna de prueba', false);
+    }
+
+    public function test_interface_copy_falls_back_to_defaults_and_can_be_overridden(): void
+    {
+        [$client, $survey] = $this->createSurvey();
+
+        $this->get("/{$client->slug}/surveys/{$survey->slug}")
+            ->assertInertia(fn ($page) => $page
+                ->where('survey.copy.contact_title', 'Déjanos tus datos')
+                ->where('survey.copy.submit_label', 'Enviar')
+                ->where('survey.copy.yes_label', 'Si'));
+
+        $survey->update([
+            'contact_title' => 'Tus datos',
+            'submit_label' => 'Enviar respuesta',
+            'yes_label' => 'Claro que sí',
+        ]);
+
+        $this->get("/{$client->slug}/surveys/{$survey->slug}")
+            ->assertInertia(fn ($page) => $page
+                ->where('survey.copy.contact_title', 'Tus datos')
+                ->where('survey.copy.submit_label', 'Enviar respuesta')
+                ->where('survey.copy.yes_label', 'Claro que sí')
+                ->where('survey.copy.no_label', 'No'));
     }
 
     public function test_response_is_stored_with_normalized_phone_and_guests(): void
