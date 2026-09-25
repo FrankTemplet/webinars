@@ -6,6 +6,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 
@@ -23,6 +24,13 @@ class ClientForm
                     ->image()
                     ->disk('public')
                     ->directory('clients/logos'),
+                Textarea::make('footer_text')
+                    ->label('Pie de página')
+                    ->helperText('Se usa en las landings de webinar, la página de gracias y las encuestas de este cliente. Acepta {year} y {client}. Si se deja vacío, cada página usa su texto por defecto.')
+                    ->placeholder('Copyright © {year} - {client} | Todos los derechos reservados.')
+                    ->rows(2)
+                    ->maxLength(500)
+                    ->columnSpanFull(),
                 TagsInput::make('internal_email_domains')
                     ->label('Dominios de correo internos')
                     ->helperText('Correos del propio cliente (organizadores, ponentes). No cuentan como leads en los conteos externos. Ej: libertynet.com')

@@ -11,6 +11,7 @@ interface Client {
     slug: string;
     name: string;
     logo?: string;
+    footer?: string | null;
     social_media?: SocialMediaLink[];
 }
 
@@ -466,7 +467,7 @@ const submit = (): void => {
                     </a>
                 </div>
                 <span class="text-muted">
-                    Copyright © {{ new Date().getFullYear() }} - {{ client.name }} | Todos los derechos reservados.
+                    {{ client.footer || `Copyright © ${new Date().getFullYear()} - ${client.name} | Todos los derechos reservados.` }}
                 </span>
             </div>
         </footer>

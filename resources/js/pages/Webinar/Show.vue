@@ -25,6 +25,7 @@ interface Client {
     name: string;
     logo?: string;
     social_media?: SocialMediaLink[];
+    footer?: string | null;
 }
 
 interface FormField {
@@ -245,7 +246,7 @@ onMounted(() => {
                                         </a>
                                     </div>
                                     <p class="text-[12px] text-[#656668] mb-1 mt-3 xl:mt-5">
-                                        Copyright © | {{ new Date().getFullYear() }} {{ client.name }} | All rights reserved.
+                                        {{ client.footer || `Copyright © | ${new Date().getFullYear()} ${client.name} | All rights reserved.` }}
                                     </p>
                                 </div>
                             </footer>

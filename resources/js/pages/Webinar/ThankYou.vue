@@ -6,6 +6,7 @@ interface Client {
     slug: string;
     name: string;
     logo?: string;
+    footer?: string | null;
 }
 
 interface TrackingScript {
@@ -109,7 +110,7 @@ onMounted(() => {
                 </a>
 
                 <p class="text-[12px] text-[#656668] mt-8 mb-0">
-                    Copyright © | {{ new Date().getFullYear() }} {{ client.name }} | All rights reserved.
+                    {{ client.footer || `Copyright © | ${new Date().getFullYear()} ${client.name} | All rights reserved.` }}
                 </p>
             </div>
         </main>
