@@ -115,6 +115,45 @@ class ZoomService
     }
 
     /**
+     * Registrantes de un webinar, con sus campos tal como los guarda Zoom.
+     * Pagina hasta traerlos todos.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function listRegistrants(string $webinarId, string $status = 'approved'): array
+    {
+        $token = $this->getAccessToken();
+        if (!$token) return [];
+
+        $registrants = [];
+        $pageToken = null;
+
+        do {
+            $response = Http::withToken($token)->get("{$this->baseUrl}/webinars/{$webinarId}/registrants", array_filter([
+                'status' => $status,
+                'page_size' => 300,
+                'next_page_token' => $pageToken,
+            ]));
+
+            if ($response->failed()) {
+                Log::error('Zoom listRegistrants failed', [
+                    'webinar_id' => $webinarId,
+                    'status' => $status,
+                    'error' => $response->json(),
+                ]);
+
+                return $registrants;
+            }
+
+            $body = $response->json();
+            $registrants = array_merge($registrants, $body['registrants'] ?? []);
+            $pageToken = $body['next_page_token'] ?? null;
+        } while (!empty($pageToken));
+
+        return $registrants;
+    }
+
+    /**
      * Get webinar participants (attendance)
      */
     public function getWebinarParticipants(string $webinarId): int
