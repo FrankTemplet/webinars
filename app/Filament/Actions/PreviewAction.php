@@ -18,11 +18,11 @@ class PreviewAction
             ->icon('heroicon-o-eye')
             ->color('gray')
             ->modalHeading(fn ($record) => 'Preview: '.($record->title ?? $record->name))
-            ->modalDescription(fn ($record) => $record->liveUrl() ?? $record->previewUrl())
+            ->modalDescription(fn ($record) => $record->publicUrl())
             ->modalWidth(Width::SixExtraLarge)
             ->modalContent(fn ($record) => view('filament.page-preview', [
                 'url' => $record->previewUrl(),
-                'liveUrl' => $record->liveUrl(),
+                'liveUrl' => $record->publicUrl(),
             ]))
             ->modalSubmitAction(false)
             ->modalCancelActionLabel('Close')

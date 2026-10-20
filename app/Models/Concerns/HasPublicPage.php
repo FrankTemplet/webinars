@@ -2,28 +2,30 @@
 
 namespace App\Models\Concerns;
 
+use Illuminate\Support\Str;
+
 /**
- * URLs de la página pública del registro. Hay dos:
+ * URLs que el panel usa para esta página:
  *
- *  - `previewUrl()` siempre apunta a esta misma aplicación (la ruta de
- *    fallback con el cliente en el path), así el iframe del panel queda en el
- *    mismo origen y funciona igual en local y en producción.
- *  - `liveUrl()` apunta al subdominio real del cliente, que es la dirección
- *    que se comparte. En local no hay subdominios, así que cae en el preview.
+ *  - `publicUrl()` es la dirección publicada, la que se comparte:
+ *    /{cliente}/{slug} para los webinars y /{cliente}/surveys/{slug} para las
+ *    encuestas.
+ *  - `previewUrl()` es la vista previa del panel, que renderiza la misma
+ *    página sin cargar pixeles ni aceptar envíos.
  */
 trait HasPublicPage
 {
     /**
-     * Nombre de la ruta local (sin el sufijo `.local`) de la página pública.
+     * Nombre de la ruta pública, sin el sufijo que llevan sus nombres.
      */
     abstract protected function publicRouteName(): string;
 
     /**
-     * Segmento que lleva la URL pública en producción: /webinars/{slug}.
+     * Nombre de la ruta de la vista previa del panel.
      */
-    abstract protected function publicPathPrefix(): string;
+    abstract protected function previewRouteName(): string;
 
-    public function previewUrl(): ?string
+    public function publicUrl(): ?string
     {
         $client = $this->client;
 
@@ -37,28 +39,19 @@ trait HasPublicPage
         ]);
     }
 
-    public function liveUrl(): ?string
+    /**
+     * Sin registro guardado no hay nada que previsualizar desde una lista;
+     * el formulario usa su propia acción, que no necesita id.
+     */
+    public function previewUrl(): ?string
     {
-        $client = $this->client;
-        $domain = config('webinars.client_domain');
-
-        if (! $client || ! $this->slug) {
+        if (! $this->exists) {
             return null;
         }
 
-        if (! $domain || app()->environment('local', 'testing')) {
-            return $this->previewUrl();
-        }
+        // Las rutas de preview nombran su parámetro como el modelo.
+        $parameter = Str::lower(class_basename($this));
 
-        $prefix = trim($this->publicPathPrefix(), '/');
-        $path = $prefix === '' ? $this->slug : $prefix.'/'.$this->slug;
-
-        return sprintf(
-            '%s://%s.%s/%s',
-            config('webinars.client_scheme', 'https'),
-            $client->slug,
-            $domain,
-            $path,
-        );
+        return route($this->previewRouteName(), [$parameter => $this->getKey()]);
     }
 }

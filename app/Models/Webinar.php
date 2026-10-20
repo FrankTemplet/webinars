@@ -96,9 +96,9 @@ class Webinar extends Model
         return 'webinar.show';
     }
 
-    protected function publicPathPrefix(): string
+    protected function previewRouteName(): string
     {
-        return 'webinars';
+        return 'preview.webinar';
     }
 
     /**

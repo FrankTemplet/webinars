@@ -31,18 +31,15 @@ Route::middleware(['web', 'auth'])
 
 /*
 |--------------------------------------------------------------------------
-| PRODUCCIÓN - Subdominios de Clientes
+| Clientes que sirven las páginas desde su propio dominio
 |--------------------------------------------------------------------------
 |
-| Rutas para webinars accesibles desde subdominios de clientes:
+| Solo para clientes que proxean /webinars/* desde su sitio hacia esta
+| aplicación con un .htaccess:
 |   - escala.templet.io/webinars/mi-webinar
-|   - libertynet.templet.io/webinars/lanzamiento
 |
-| El middleware DetectClientFromDomain detecta automáticamente el cliente
-| basándose en el subdominio.
-|
-| IMPORTANTE: Cada cliente debe tener configurado en su sitio web un
-| .htaccess que redirija /webinars/* a esta aplicación Laravel.
+| El middleware DetectClientFromDomain saca el cliente del subdominio. NO es
+| la dirección con la que se publican las páginas: esa es la de abajo.
 |
 */
 
@@ -66,11 +63,17 @@ Route::middleware(['web', \App\Http\Middleware\DetectClientFromDomain::class])
 
 /*
 |--------------------------------------------------------------------------
-| DESARROLLO LOCAL (fallback)
+| Direcciones publicadas
 |--------------------------------------------------------------------------
 |
-| Permite usar rutas sin configurar subdominios:
-|   http://localhost:8000/client/escala/webinars/mi-webinar
+| Es la forma con la que se comparten las páginas y la que arma el panel:
+|   https://webinars.templet.io/libertynet/identidad-como-perimetro-ia
+|   https://webinars.templet.io/libertynet/surveys/satisfaccion
+|
+| El sufijo `.local` de los nombres es herencia de cuando se creyó que esto
+| era solo un atajo de desarrollo; son las rutas de verdad.
+|
+| Van al final porque /{client}/{slug} se traga cualquier par de segmentos.
 |
 */
 

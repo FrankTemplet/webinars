@@ -108,9 +108,9 @@ class Survey extends Model
         return 'survey.show';
     }
 
-    protected function publicPathPrefix(): string
+    protected function previewRouteName(): string
     {
-        return 'surveys';
+        return 'preview.survey';
     }
 
     /**

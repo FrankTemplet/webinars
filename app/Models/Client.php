@@ -89,7 +89,10 @@ class Client extends Model
         return $this->exists ? route('preview.client', ['client' => $this->getKey()]) : null;
     }
 
-    public function liveUrl(): ?string
+    /**
+     * El cliente no tiene página pública propia.
+     */
+    public function publicUrl(): ?string
     {
         return null;
     }

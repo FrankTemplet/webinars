@@ -52,7 +52,7 @@ class AdminPublicPageActionsTest extends TestCase
         $response->assertOk();
         $response->assertSee('Preview');
         $response->assertSee('Live');
-        $response->assertSee($webinar->liveUrl(), false);
+        $response->assertSee($webinar->publicUrl(), false);
     }
 
     public function test_survey_list_offers_preview_and_live(): void
@@ -65,7 +65,7 @@ class AdminPublicPageActionsTest extends TestCase
         $response->assertOk();
         $response->assertSee('Preview');
         $response->assertSee('Live');
-        $response->assertSee($survey->liveUrl(), false);
+        $response->assertSee($survey->publicUrl(), false);
     }
 
     public function test_the_new_webinar_form_offers_a_preview(): void
