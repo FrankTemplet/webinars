@@ -105,7 +105,16 @@ class ImportSubmissionsFromExport extends Command
         }
 
         $this->info('Filas en el archivo para ese webinar: '.count($rows));
-        $this->line('Columnas de respuesta: '.implode(', ', $this->answerColumns($headers)).PHP_EOL);
+        $this->line('Columnas de respuesta: '.implode(', ', $this->answerColumns($headers)));
+
+        $total = count($rows);
+        $rows = $this->deduplicate($headers, $rows);
+
+        if ($duplicates = $total - count($rows)) {
+            $this->warn("Hay {$duplicates} fila(s) con un correo repetido: de cada una se usa la más antigua.");
+        }
+
+        $this->newLine();
 
         $created = 0;
         $completed = 0;
@@ -155,6 +164,23 @@ class ImportSubmissionsFromExport extends Command
             ."Creados: {$created}. Completados: {$completed}. Sin cambios: {$untouched}.");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Una misma persona puede haberse registrado dos veces. Se conserva su
+     * primer registro, que es el que marca cuándo llegó.
+     *
+     * @param  array<int, string>  $headers
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function deduplicate(array $headers, array $rows): array
+    {
+        return collect($rows)
+            ->sortBy(fn (array $row) => (string) ($row['fecha_de_creacion'] ?? ''))
+            ->unique(fn (array $row) => Str::lower(trim((string) ($this->answers($headers, $row)['email'] ?? ''))))
+            ->values()
+            ->all();
     }
 
     /**

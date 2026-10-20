@@ -214,6 +214,23 @@ class ImportSubmissionsFromExportTest extends TestCase
         $this->assertSame(0, Submission::withoutGlobalScopes()->count());
     }
 
+    public function test_a_repeated_email_keeps_the_first_registration(): void
+    {
+        $webinar = $this->webinar();
+
+        $this->writeExport([
+            $this->row(['creado' => '2026-10-18 09:00:00', 'zoom' => '2026-10-18 09:00:01', 'utm_term' => 'deepfake_frio']),
+            $this->row(['creado' => '2026-10-16 08:00:00', 'zoom' => '2026-10-16 08:00:01', 'utm_term' => 'voceros_frio']),
+        ]);
+
+        $this->import($webinar)->assertSuccessful();
+
+        $submission = Submission::withoutGlobalScopes()->sole();
+
+        $this->assertSame('2026-10-16 08:00:00', $submission->created_at->toDateTimeString());
+        $this->assertSame('voceros_frio', $submission->utm_term);
+    }
+
     public function test_it_fails_when_no_row_matches(): void
     {
         $webinar = $this->webinar();
