@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3';
 import DynamicForm from '@/components/DynamicForm.vue';
-import { route } from 'ziggy-js';
+import { useLivePreview, toList, type Theme } from '@/composables/useLivePreview';
 import { computed, onMounted } from 'vue';
 
 // Declare global window properties for tracking scripts
@@ -55,25 +55,33 @@ interface Webinar {
     hero_image?: string;
     form_schema?: FormField[];
     tracking_scripts?: TrackingScript[];
+    theme: Theme;
 }
 
 interface Props {
     client: Client;
     webinar: Webinar;
+    submitUrl: string;
+    /** Dentro del iframe del panel: los cambios del formulario llegan en vivo. */
+    preview?: boolean;
 }
 
 const props = defineProps<Props>();
 
-const isSaseLanding = computed(() => {
-    return props.client.slug === 'libertynet'
-        && props.webinar.slug === 'mas-alla-del-firewall-la-nueva-era-sase-2';
-});
+const { pick, vars: themeVars, fontUrl } = useLivePreview(
+    () => props.webinar.theme,
+    props.preview === true,
+);
 
-// Construct the submit URL
-const submitUrl = route('webinar.store.local', {
-    client: props.client.slug,
-    slug: props.webinar.slug
-});
+// Contenido mostrado: lo que mande el formulario y, si viene vacío, lo que
+// ya tenía la página.
+const view = computed(() => ({
+    title: pick('title', props.webinar.title),
+    subtitle: pick('subtitle', props.webinar.subtitle),
+    description: pick('description', props.webinar.description),
+    show_title: pick<unknown>('show_title', props.webinar.show_title) !== false,
+    form_schema: toList<FormField>(pick('form_schema', props.webinar.form_schema)),
+}));
 
 const socialLinks = computed(() => {
     return props.client.social_media || (props.client as any).socialMedia || [];
@@ -108,6 +116,9 @@ const linkedinPixel = computed(() => {
 });
 
 onMounted(() => {
+    // Dentro del panel no se cargan pixeles: ensuciarían las métricas.
+    if (props.preview) return;
+
     // Inject Facebook Pixel
     if (facebookPixel.value && facebookPixel.value.pixel_id) {
         if (!window.fbq) {
@@ -158,21 +169,11 @@ onMounted(() => {
 </script>
 
 <template>
-    <Head :title="webinar.meta_title || webinar.title">
+    <Head :title="webinar.meta_title || view.title">
         <meta name="description" :content="webinar.meta_description || webinar.description" />
-        <link
-            rel="icon"
-            type="image/x-icon"
-            :href="isSaseLanding
-                ? 'https://libertynet.templet.io/RSVP/SASE-2/images/favicon.ico'
-                : `/storage/${client.logo}`"
-            v-if="isSaseLanding || client.logo"
-        >
-        <link
-            v-if="isSaseLanding"
-            rel="stylesheet"
-            href="https://fonts.bunny.net/css?family=maven-pro:400,700"
-        >
+        <link v-if="client.logo" rel="icon" :href="`/storage/${client.logo}`">
+        <link rel="preconnect" href="https://fonts.bunny.net">
+        <link v-if="fontUrl" rel="stylesheet" :href="fontUrl">
 
         <!-- Noscript fallbacks are still good in the head -->
         <noscript v-if="facebookPixel">
@@ -185,14 +186,13 @@ onMounted(() => {
         </noscript>
     </Head>
 
-    <!-- Global Font Fix -->
-    <div :class="[isSaseLanding ? 'sase-landing' : 'font-roboto', 'text-[#656668]']">
+    <div class="webinar-page" :style="themeVars">
         <main class="header min-h-screen">
             <div class="container-fluid mx-auto px-0">
                 <div class="flex flex-wrap h-full">
 
                     <!-- Left Column: Form & Content -->
-                    <div class="w-full md:w-5/12 px-6 md:px-12 py-12 md:py-0 order-2 md:order-1 h-full relative z-10 bg-white">
+                    <div class="form-column w-full md:w-5/12 px-6 md:px-12 py-12 md:py-0 order-2 md:order-1 h-full relative z-10">
                         <div class="wrapper px-2 md:px-8 max-w-xl mx-auto md:mr-0 md:ml-auto md:min-h-screen flex flex-col justify-center">
 
                             <header class="mb-4 mt-3">
@@ -201,31 +201,32 @@ onMounted(() => {
                                         v-if="webinar.header_logo"
                                         :src="`/storage/${webinar.header_logo}`"
                                         alt="Logos"
-                                        :class="isSaseLanding ? 'w-auto max-w-full' : 'h-[60px] w-auto'"
+                                        class="h-[60px] w-auto max-w-full"
                                     >
                                     <img
                                         v-else-if="client.logo"
                                         :src="`/storage/${client.logo}`"
                                         alt="Client Logo"
-                                        :class="isSaseLanding ? 'w-auto max-w-full' : 'h-[60px] w-auto'"
+                                        class="h-[60px] w-auto max-w-full"
                                     >
                                 </div>
-                                <h1 v-if="webinar.show_title !== false" class="text-[#041B36] font-bold text-[34px] md:text-[38px] leading-[1.1] mb-3 font-roboto">
-                                    {{ webinar.title }}
+                                <h1 v-if="view.show_title" class="webinar-title font-bold text-[34px] md:text-[38px] leading-[1.1] mb-3">
+                                    {{ view.title }}
                                 </h1>
-                                <p v-if="webinar.subtitle" class="text-[#1A1A1A] text-[20px] leading-[26px] mb-0 tracking-normal font-bold font-infra">
-                                    {{ webinar.subtitle }}
+                                <p v-if="view.subtitle" class="webinar-subtitle text-[20px] leading-[26px] mb-0 tracking-normal font-bold">
+                                    {{ view.subtitle }}
                                 </p>
-                                <div v-if="webinar.description" class="text-[#656668] text-[16px] mb-4 font-roboto" v-html="webinar.description"></div>
+                                <div v-if="view.description" class="webinar-description text-[16px] mb-4" v-html="view.description"></div>
                             </header>
 
                             <!-- Dynamic Form Component -->
                             <div class="w-full">
                                 <DynamicForm
-                                    v-if="webinar.form_schema && webinar.form_schema.length"
-                                    :schema="webinar.form_schema"
+                                    v-if="view.form_schema && view.form_schema.length"
+                                    :schema="view.form_schema"
                                     :submit-url="submitUrl"
                                     :tracking-scripts="enabledTrackingScripts"
+                                    :preview="preview"
                                 />
                                 <div v-else class="text-center text-gray-500 py-4">
                                     Formulario no disponible.
@@ -234,18 +235,18 @@ onMounted(() => {
 
                             <footer class="mt-8 md:mt-12 mb-8">
                                 <div class="block mt-3">
-                                    <p class="text-[12px] mb-2 text-[#656668]">Síguenos:</p>
+                                    <p class="text-[12px] mb-2">Síguenos:</p>
                                     <div class="flex mb-4" v-if="socialLinks.length">
                                         <a v-for="link in socialLinks"
                                            :key="link.type"
                                            :href="link.url"
                                            target="_blank"
-                                           class="mr-4 text-[#656668] hover:text-[#00B0D3] transition-all text-xl"
+                                           class="social-link mr-4 transition-all text-xl"
                                            :title="link.type">
                                             <i :class="getSocialIcon(link.type)"></i>
                                         </a>
                                     </div>
-                                    <p class="text-[12px] text-[#656668] mb-1 mt-3 xl:mt-5">
+                                    <p class="text-[12px] mb-1 mt-3 xl:mt-5">
                                         {{ client.footer || `Copyright © | ${new Date().getFullYear()} ${client.name} | All rights reserved.` }}
                                     </p>
                                 </div>
@@ -270,76 +271,55 @@ onMounted(() => {
 </template>
 
 <style>
-/* Font override utility */
-.font-roboto {
-    font-family: 'Roboto', sans-serif;
+/* Los tokens (--font, --accent, --heading, --subtitle, --text, --bg y los
+   radios) los inyecta el servidor en el div raíz desde la configuración del
+   webinar. Lo que antes era un bloque fijo para una sola landing ahora sale
+   de estas variables. */
+.webinar-page {
+    font-family: var(--font);
+    color: var(--text);
+}
+
+.webinar-page,
+.webinar-page input,
+.webinar-page textarea,
+.webinar-page select,
+.webinar-page button,
+.webinar-page label,
+.webinar-page p {
+    font-family: var(--font);
+}
+
+.form-column {
+    background-color: var(--bg);
+}
+
+.webinar-title {
+    color: var(--heading);
+}
+
+.webinar-subtitle {
+    color: var(--subtitle);
+}
+
+.webinar-description,
+.webinar-description p {
+    color: var(--text);
+}
+
+.webinar-description a {
+    color: var(--accent);
+}
+
+.social-link {
+    color: var(--text);
+}
+
+.social-link:hover {
+    color: var(--accent);
 }
 
 .font-infra {
-    font-family: 'Infra', 'Roboto', sans-serif;
-}
-
-/* LibertyNet SASE landing: scoped to its slug through .sase-landing */
-.sase-landing,
-.sase-landing input,
-.sase-landing textarea,
-.sase-landing select,
-.sase-landing button,
-.sase-landing label,
-.sase-landing p {
-    font-family: 'Maven Pro', sans-serif;
-}
-
-.sase-landing header h1 {
-    display: none;
-}
-
-.sase-landing header > p {
-    color: #FF6000 !important;
-    font-family: 'Maven Pro', sans-serif !important;
-    font-size: 24px !important;
-    font-weight: 700 !important;
-    line-height: 28.8px !important;
-    margin-bottom: 16px !important;
-}
-
-.sase-landing input:not([type='radio']):not([type='checkbox']),
-.sase-landing textarea,
-.sase-landing select {
-    color: #707070 !important;
-    border-color: #707070 !important;
-    border-radius: 10px !important;
-}
-
-.sase-landing input:not([type='radio']):not([type='checkbox']):focus,
-.sase-landing textarea:focus,
-.sase-landing select:focus {
-    color: #010812 !important;
-    background-color: #f4f4f4 !important;
-    border-color: #FF6000 !important;
-    box-shadow: 0 0 0 0.25rem rgba(255, 96, 0, 0.25) !important;
-}
-
-.sase-landing button[type='submit'] {
-    color: #FFFFFF !important;
-    background-color: #FF6000 !important;
-    border-color: #FF6000 !important;
-    border-radius: 6px !important;
-    padding: 10px 24px !important;
-    text-transform: none !important;
-}
-
-.sase-landing button[type='submit']:hover,
-.sase-landing button[type='submit']:focus {
-    color: #FFFFFF !important;
-    background-color: #e65c0c !important;
-    border-color: #e65c0c !important;
-}
-
-@media (min-width: 768px) {
-    .sase-landing .wrapper {
-        padding-left: 1.5rem !important;
-        padding-right: 1.5rem !important;
-    }
+    font-family: 'Infra', var(--font);
 }
 </style>

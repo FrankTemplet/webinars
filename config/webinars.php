@@ -21,4 +21,19 @@ return [
         'cwc',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Dominio público de los clientes
+    |--------------------------------------------------------------------------
+    |
+    | Cada cliente publica sus páginas en {slug}.{client_domain}. Se usa para
+    | armar el enlace "Open live" del panel; el preview siempre apunta a esta
+    | misma aplicación.
+    |
+    */
+
+    'client_domain' => env('WEBINARS_CLIENT_DOMAIN', 'templet.io'),
+
+    'client_scheme' => env('WEBINARS_CLIENT_SCHEME', 'https'),
+
 ];

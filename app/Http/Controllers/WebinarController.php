@@ -65,9 +65,10 @@ class WebinarController extends Controller
         [$client, $webinar] = $this->resolveClientAndWebinar($request, $clientSlug, $webinarSlug);
 
         return Inertia::render('Webinar/Show', [
-            'client' => $client,
-            'webinar' => $webinar,
-        ]);
+            'client' => $client->toPublicArray(),
+            'webinar' => $webinar->toPublicArray(),
+            'submitUrl' => $this->webinarRoute($request, 'webinar.store', $client, $webinar),
+        ])->withViewData(['custom_css' => $webinar->resolvedCustomCss()]);
     }
 
     public function thankYou(Request $request, $clientSlug = null, $webinarSlug = null)
@@ -82,14 +83,17 @@ class WebinarController extends Controller
         }
 
         return Inertia::render('Webinar/ThankYou', [
-            'client' => $client,
-            'webinar' => $webinar->only([
+            'client' => $client->toPublicArray(),
+            'webinar' => array_merge($webinar->only([
                 'slug', 'title', 'meta_title', 'meta_description', 'header_logo',
                 'thank_you_title', 'thank_you_message', 'thank_you_image',
-                'thank_you_cta_text', 'thank_you_cta_url', 'tracking_scripts',
+                'thank_you_cta_text', 'thank_you_cta_url',
+            ]), [
+                'tracking_scripts' => $webinar->publicTrackingScripts(),
+                'theme' => $webinar->theme(),
             ]),
             'webinarUrl' => $webinarUrl,
-        ]);
+        ])->withViewData(['custom_css' => $webinar->resolvedCustomCss()]);
     }
 
     public function store(Request $request, $clientSlug = null, $webinarSlug = null)

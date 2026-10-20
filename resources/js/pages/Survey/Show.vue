@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3';
+import { useLivePreview, type Theme } from '@/composables/useLivePreview';
 import { computed } from 'vue';
 
 interface SocialMediaLink {
@@ -37,8 +38,7 @@ interface Survey {
     intro?: string;
     hero_image?: string;
     header_logo?: string;
-    accent_color: string;
-    accent_text_color: string;
+    theme: Theme;
     meta_title?: string;
     meta_description?: string;
     is_open: boolean;
@@ -57,9 +57,20 @@ interface Props {
     client: Client;
     survey: Survey;
     submitUrl: string;
+    /** Dentro del iframe del panel: los cambios del formulario llegan en vivo. */
+    preview?: boolean;
 }
 
 const props = defineProps<Props>();
+
+const { pick, vars: brandVars, fontUrl } = useLivePreview(
+    () => props.survey.theme,
+    props.preview === true,
+);
+
+const view = computed(() => ({
+    intro: pick('intro', props.survey.intro),
+}));
 
 const guestRows = computed(() => Array.from({ length: props.survey.guests_count }, (_, i) => i));
 
@@ -93,12 +104,6 @@ const urlParams = new URLSearchParams(window.location.search);
     if (value) form[param] = value;
 });
 
-// Tokens de marca del original (SASE usa naranja, gen-IA verde).
-const brandVars = computed(() => ({
-    '--accent': props.survey.accent_color,
-    '--accent-text': props.survey.accent_text_color,
-}));
-
 // Los errores de campos anidados (guests.0.email) y los de la encuesta en sí
 // no están en el tipo del form, así que se leen por llave.
 const errorFor = (key: string): string | undefined =>
@@ -124,6 +129,8 @@ const getSocialIcon = (type: string) => {
 };
 
 const submit = (): void => {
+    if (props.preview) return;
+
     form.post(props.submitUrl, {
         preserveScroll: true,
         onSuccess: () => form.reset(),
@@ -136,7 +143,7 @@ const submit = (): void => {
         <meta name="description" :content="survey.meta_description || ''" />
         <link v-if="client.logo" rel="icon" type="image/x-icon" :href="`/storage/${client.logo}`" />
         <link rel="preconnect" href="https://fonts.bunny.net" />
-        <link rel="stylesheet" href="https://fonts.bunny.net/css?family=maven-pro:400,500,600,700,800" />
+        <link v-if="fontUrl" rel="stylesheet" :href="fontUrl" />
     </Head>
 
     <div class="survey-page" :style="brandVars">
@@ -154,7 +161,7 @@ const submit = (): void => {
         <!-- Intro -->
         <main class="py-6">
             <div class="survey-container">
-                <div v-if="survey.intro" class="survey-intro" v-html="survey.intro"></div>
+                <div v-if="view.intro" class="survey-intro" v-html="view.intro"></div>
             </div>
         </main>
 
@@ -483,9 +490,9 @@ const submit = (): void => {
 /* Réplica de scss/_utilities, _forms, _buttons y _footer de las encuestas
    estáticas. Los colores de marca entran por --accent / --accent-text. */
 .survey-page {
-    font-family: 'Maven Pro', sans-serif;
-    background-color: #ffffff;
-    color: #1a1a1a;
+    font-family: var(--font);
+    background-color: var(--bg);
+    color: var(--text);
 }
 
 /* .container de Bootstrap 5 */
@@ -529,28 +536,28 @@ const submit = (): void => {
 .text-center { text-align: center; }
 
 .title {
-    color: #020e1e;
+    color: var(--heading);
     font-size: 25px;
     line-height: 1.1;
     font-weight: 800;
 }
 
 .lead {
-    color: #1a1a1a;
+    color: var(--text);
     font-size: 1rem;
     margin: 0;
 }
 .survey-intro :deep(h1),
 .survey-intro :deep(h2),
 .survey-intro :deep(h3) {
-    color: #020e1e;
+    color: var(--heading);
     font-size: 25px;
     line-height: 1.1;
     font-weight: 800;
     margin: 0 0 1rem;
 }
 .survey-intro :deep(p) {
-    color: #1a1a1a;
+    color: var(--text);
     font-size: 1rem;
     margin: 0 0 1rem;
 }
@@ -581,13 +588,13 @@ ol {
     margin: 0;
     list-style: decimal outside;
 }
-ol li::marker { font-weight: 700; color: #1a1a1a; }
+ol li::marker { font-weight: 700; color: var(--text); }
 
 .title-box {
     font-size: 16px;
     line-height: 1.1;
     font-weight: 700;
-    color: #1a1a1a;
+    color: var(--text);
     margin-bottom: 1rem;
 }
 .required { color: #dc3545; margin-left: 0.25rem; }
@@ -599,10 +606,10 @@ ol li::marker { font-weight: 700; color: #1a1a1a; }
     font-size: 1rem;
     line-height: 1.5;
     font-family: inherit;
-    color: #1a1a1a;
+    color: var(--text);
     background: #f2f2f280;
     border: 1px solid #f4f4f4;
-    border-radius: 10px;
+    border-radius: var(--radius-field);
 }
 .form-control::placeholder { color: #999999; opacity: 1; }
 .form-control:focus {
@@ -668,7 +675,7 @@ ol li::marker { font-weight: 700; color: #1a1a1a; }
     font-family: inherit;
     font-size: 1rem;
     border: 1px solid transparent;
-    border-radius: 0.5rem;
+    border-radius: var(--radius-button);
 }
 .btn-primary {
     color: var(--accent-text);
@@ -691,5 +698,5 @@ ol li::marker { font-weight: 700; color: #1a1a1a; }
     transition: color 0.15s ease-in-out;
 }
 .footer-social a:hover { color: var(--accent); }
-footer .text-muted { color: #1a1a1a; font-size: 0.75rem; }
+footer .text-muted { color: var(--text); font-size: 0.75rem; }
 </style>

@@ -34,6 +34,8 @@ interface Props {
     schema: FormField[];
     submitUrl: string;
     trackingScripts?: TrackingScript[];
+    /** En el preview del panel el formulario se ve pero no se envía. */
+    preview?: boolean;
 }
 
 interface FormData {
@@ -165,6 +167,8 @@ const triggerTrackingEvents = (eventId: string): void => {
 };
 
 const submit = (): void => {
+    if (props.preview) return;
+
     // Generate a unique event ID for de-duplication (CAPI)
     const eventId = generateUUID();
 
@@ -196,7 +200,7 @@ const submit = (): void => {
                     :placeholder="field.label"
                     v-model="form[field.name]"
                     :required="field.required"
-                    class="block w-full h-[58px] px-3 pt-[1.625rem] pb-[0.625rem] text-[#656668] bg-white border border-[#DADCDE] rounded-[5px] focus:outline-none focus:border-[#00B0D3] focus:ring-1 focus:ring-[#00B0D3] peer placeholder-transparent"
+                    class="form-field block w-full h-[58px] px-3 pt-[1.625rem] pb-[0.625rem] peer placeholder-transparent"
                 />
 
                 <!-- Phone Input with Mask -->
@@ -211,7 +215,7 @@ const submit = (): void => {
                     @keypress="(e) => { if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'Tab' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') e.preventDefault(); }"
                     :required="field.required"
                     maxlength="14"
-                    class="block w-full h-[58px] px-3 pt-[1.625rem] pb-[0.625rem] text-[#656668] bg-white border border-[#DADCDE] rounded-[5px] focus:outline-none focus:border-[#00B0D3] focus:ring-1 focus:ring-[#00B0D3] peer placeholder-transparent"
+                    class="form-field block w-full h-[58px] px-3 pt-[1.625rem] pb-[0.625rem] peer placeholder-transparent"
                 />
 
                 <!-- Textarea -->
@@ -221,7 +225,7 @@ const submit = (): void => {
                     v-model="form[field.name] as string"
                     :placeholder="field.label"
                     :required="field.required"
-                    class="block w-full px-3 pt-[1.625rem] pb-[0.625rem] text-[#656668] bg-white border border-[#DADCDE] rounded-[5px] focus:outline-none focus:border-[#00B0D3] focus:ring-1 focus:ring-[#00B0D3] peer placeholder-transparent h-auto min-h-[100px]"
+                    class="form-field block w-full px-3 pt-[1.625rem] pb-[0.625rem] peer placeholder-transparent h-auto min-h-[100px]"
                 ></textarea>
 
                 <!-- Select -->
@@ -230,7 +234,7 @@ const submit = (): void => {
                     :id="field.name"
                     v-model="form[field.name] as string"
                     :required="field.required"
-                    class="block w-full h-[58px] px-3 pt-[1.625rem] pb-[0.625rem] text-[#656668] bg-white border border-[#DADCDE] rounded-[5px] focus:outline-none focus:border-[#00B0D3] focus:ring-1 focus:ring-[#00B0D3] peer appearance-none"
+                    class="form-field block w-full h-[58px] px-3 pt-[1.625rem] pb-[0.625rem] peer appearance-none"
                 >
                     <option value="" disabled selected></option>
                     <option v-for="option in field.options" :key="option" :value="option">
@@ -240,7 +244,7 @@ const submit = (): void => {
 
                 <!-- Radio Button Group -->
                 <div v-else-if="field.type === 'radio'" class="pt-2">
-                    <label class="block text-sm font-semibold text-[#041B36] mb-2">
+                    <label class="group-label block text-sm font-semibold mb-2">
                         {{ field.label }} <span v-if="field.required" class="text-red-500">*</span>
                     </label>
                     <div class="flex flex-row flex-wrap gap-x-6 gap-y-2">
@@ -252,9 +256,9 @@ const submit = (): void => {
                                 :value="option"
                                 v-model="form[field.name] as string"
                                 :required="field.required"
-                                class="h-4 w-4 border-gray-300 text-[#00B0D3] focus:ring-[#00B0D3] cursor-pointer"
+                                class="form-check-input h-4 w-4 cursor-pointer"
                             />
-                            <label :for="`${field.name}_${option}`" class="ml-2 block text-sm text-[#656668] cursor-pointer">
+                            <label :for="`${field.name}_${option}`" class="ml-2 block text-sm cursor-pointer">
                                 {{ option }}
                             </label>
                         </div>
@@ -267,9 +271,9 @@ const submit = (): void => {
                         :id="field.name"
                         type="checkbox"
                         v-model="form[field.name] as boolean"
-                        class="h-4 w-4 rounded border-gray-300 text-[#00B0D3] focus:ring-[#00B0D3]"
+                        class="form-check-input h-4 w-4 rounded"
                     />
-                    <label :for="field.name" class="ml-2 block text-sm text-[#656668]">
+                    <label :for="field.name" class="ml-2 block text-sm">
                         {{ field.label }}
                     </label>
                 </div>
@@ -278,7 +282,7 @@ const submit = (): void => {
                 <label
                     v-if="!['checkbox', 'radio'].includes(field.type)"
                     :for="field.name"
-                    class="absolute top-0 left-0 h-full px-3 py-4 text-[#656668] transition-all duration-200 ease-in-out origin-[0_0] transform scale-100 pointer-events-none peer-focus:scale-85 peer-focus:-translate-y-2 peer-not-placeholder-shown:scale-85 peer-not-placeholder-shown:-translate-y-2 peer-focus:opacity-65 peer-not-placeholder-shown:opacity-65"
+                    class="absolute top-0 left-0 h-full px-3 py-4 transition-all duration-200 ease-in-out origin-[0_0] transform scale-100 pointer-events-none peer-focus:scale-85 peer-focus:-translate-y-2 peer-not-placeholder-shown:scale-85 peer-not-placeholder-shown:-translate-y-2 peer-focus:opacity-65 peer-not-placeholder-shown:opacity-65"
                 >
                     {{ field.label }}
                 </label>
@@ -293,7 +297,7 @@ const submit = (): void => {
             <button
                 type="submit"
                 :disabled="form.processing"
-                class="inline-block w-auto text-center align-middle cursor-pointer select-none border border-transparent px-[1.75rem] py-[0.625rem] text-[1rem] leading-[1.5] rounded-none uppercase font-bold text-white bg-[#00B0D3] hover:bg-white hover:text-[#00B0D3] hover:border-[#00B0D3] transition-colors duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                class="btn-submit inline-block w-auto text-center align-middle cursor-pointer select-none border px-[1.75rem] py-[0.625rem] text-[1rem] leading-[1.5] transition-colors duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 <span v-if="form.processing">Enviando...</span>
                 <span v-else>Registrarme</span>
@@ -301,8 +305,51 @@ const submit = (): void => {
         </div>
 
         <div v-if="form.recentlySuccessful" class="mt-4 p-4 text-center">
-            <h1 class="mb-2 text-[28px] font-bold text-[#041B36]">Gracias!</h1>
-            <p class="mb-0 text-[#656668]">Sus datos han sido ingresados con éxito.</p>
+            <h1 class="group-label mb-2 text-[28px] font-bold">Gracias!</h1>
+            <p class="mb-0">Sus datos han sido ingresados con éxito.</p>
         </div>
     </form>
 </template>
+
+<style scoped>
+/* Los colores y radios vienen de los tokens que la landing define en su div
+   raíz (--accent, --text, --heading, --radius-field, --radius-button), con
+   los valores originales del formulario como respaldo. */
+.form-field {
+    color: var(--text, #656668);
+    background-color: var(--field-bg, #ffffff);
+    border: 1px solid var(--field-border, #dadcde);
+    border-radius: var(--radius-field, 5px);
+}
+
+.form-field:focus {
+    outline: none;
+    border-color: var(--accent, #00b0d3);
+    box-shadow: 0 0 0 1px var(--accent, #00b0d3);
+}
+
+.group-label {
+    color: var(--heading, #041b36);
+}
+
+.form-check-input {
+    accent-color: var(--accent, #00b0d3);
+    border-color: var(--field-border, #dadcde);
+}
+
+.btn-submit {
+    color: var(--accent-text, #ffffff);
+    background-color: var(--accent, #00b0d3);
+    border-color: var(--accent, #00b0d3);
+    border-radius: var(--radius-button, 0);
+    text-transform: var(--button-transform, uppercase);
+    font-weight: 700;
+}
+
+.btn-submit:hover:not(:disabled),
+.btn-submit:focus-visible:not(:disabled) {
+    color: var(--accent, #00b0d3);
+    background-color: var(--bg, #ffffff);
+    border-color: var(--accent, #00b0d3);
+}
+</style>

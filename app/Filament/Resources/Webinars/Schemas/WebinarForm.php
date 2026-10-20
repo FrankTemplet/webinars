@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Webinars\Schemas;
 
+use App\Filament\Schemas\ThemeSection;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
@@ -94,6 +95,8 @@ class WebinarForm
                     ->disk('public')
                     ->directory('webinars/logos')
                     ->columnSpanFull(),
+                ThemeSection::forPage(),
+
                 Section::make('Tracking Scripts')
                     ->description('Configure tracking pixels for this webinar (Facebook, LinkedIn, etc.)')
                     ->schema([

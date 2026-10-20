@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPublicPage;
+use App\Models\Concerns\HasTheme;
 use App\Models\Scopes\ClientAccessScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,6 +11,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Survey extends Model
 {
+    use HasPublicPage;
+    use HasTheme;
+
     /**
      * Enunciados por defecto de la plantilla de satisfacción.
      * Se usan cuando la encuesta no sobreescribe el texto.
@@ -42,6 +47,7 @@ class Survey extends Model
     protected $fillable = [
         'client_id', 'webinar_id', 'title', 'slug', 'intro',
         'hero_image', 'header_logo', 'accent_color', 'accent_text_color', 'meta_title', 'meta_description',
+        'background_color', 'button_radius', 'field_radius', 'custom_css',
         'q1_label', 'q2_label', 'q3_label', 'q3_options', 'q4_label', 'yes_label', 'no_label', 'q5_label',
         'guests_count', 'contact_enabled', 'contact_title', 'contact_description', 'submit_label',
         'extra_questions', 'is_open', 'closed_message',
@@ -52,6 +58,8 @@ class Survey extends Model
         'q3_options' => 'array',
         'extra_questions' => 'array',
         'guests_count' => 'integer',
+        'button_radius' => 'integer',
+        'field_radius' => 'integer',
         'contact_enabled' => 'boolean',
         'is_open' => 'boolean',
     ];
@@ -88,6 +96,39 @@ class Survey extends Model
     public function responses(): HasMany
     {
         return $this->hasMany(SurveyResponse::class);
+    }
+
+    protected function themeParent(): ?Client
+    {
+        return $this->client;
+    }
+
+    protected function publicRouteName(): string
+    {
+        return 'survey.show';
+    }
+
+    protected function publicPathPrefix(): string
+    {
+        return 'surveys';
+    }
+
+    /**
+     * Valores con los que nacieron las encuestas estáticas: Maven Pro,
+     * naranja de marca y los radios del SCSS original.
+     */
+    protected function themeDefaults(): array
+    {
+        return [
+            '--font-family' => 'Maven Pro',
+            '--accent' => '#FF6000',
+            '--accent-text' => '#FFFFFF',
+            '--heading' => '#020E1E',
+            '--text' => '#1A1A1A',
+            '--bg' => '#FFFFFF',
+            '--radius-button' => '8px',
+            '--radius-field' => '10px',
+        ];
     }
 
     /**
@@ -140,7 +181,7 @@ class Survey extends Model
     /**
      * Estructura que consume la página pública de la encuesta.
      */
-    public function toPublicArray(): array
+    public function toPublicArray(bool $forEditor = false): array
     {
         $guestsCount = max(0, min(10, (int) $this->guests_count));
         $fixedCount = $guestsCount > 0 ? 5 : 4;
@@ -151,8 +192,7 @@ class Survey extends Model
             'intro' => $this->intro,
             'hero_image' => $this->hero_image,
             'header_logo' => $this->header_logo,
-            'accent_color' => $this->accent_color ?: '#FF6000',
-            'accent_text_color' => $this->accent_text_color ?: '#FFFFFF',
+            'theme' => $this->theme($forEditor),
             'meta_title' => $this->meta_title,
             'meta_description' => $this->meta_description,
             'is_open' => $this->is_open,

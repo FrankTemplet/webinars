@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Surveys\Tables;
 
+use App\Filament\Actions\OpenLiveAction;
+use App\Filament\Actions\PreviewAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -14,6 +16,7 @@ class SurveysTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->with('client'))
             ->columns([
                 TextColumn::make('client.name')
                     ->label('Client')
@@ -46,6 +49,8 @@ class SurveysTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->recordActions([
+                PreviewAction::make(),
+                OpenLiveAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([

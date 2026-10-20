@@ -2,9 +2,9 @@
 
 namespace App\Filament\Resources\Surveys\Schemas;
 
+use App\Filament\Schemas\ThemeSection;
 use App\Models\Survey;
 use App\Models\Webinar;
-use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
@@ -81,25 +81,7 @@ class SurveyForm
                     ->directory('surveys/logos')
                     ->columnSpanFull(),
 
-                Section::make('Branding')
-                    ->description('The layout is shared by every survey; only these colors change per client.')
-                    ->schema([
-                        ColorPicker::make('accent_color')
-                            ->label('Accent Color')
-                            ->helperText('Buttons, focus rings and selected options.')
-                            ->default('#FF6000'),
-                        Select::make('accent_text_color')
-                            ->label('Button Text')
-                            ->helperText('Pick the one that reads against the accent color.')
-                            ->options([
-                                '#FFFFFF' => 'White',
-                                '#1A1A1A' => 'Dark',
-                            ])
-                            ->default('#FFFFFF'),
-                    ])
-                    ->columns(2)
-                    ->columnSpanFull()
-                    ->collapsible(),
+                ThemeSection::forPage(),
 
                 Section::make('Template Questions')
                     ->description('These five are always asked and cannot be removed — only their wording is editable. To ask more, use Additional Questions below.')

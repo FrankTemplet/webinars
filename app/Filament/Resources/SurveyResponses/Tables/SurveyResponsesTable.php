@@ -4,6 +4,7 @@ namespace App\Filament\Resources\SurveyResponses\Tables;
 
 use App\Models\Client;
 use App\Models\Survey;
+use App\Models\Webinar;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -28,11 +29,19 @@ class SurveyResponsesTable
     {
         return $table
             ->defaultSort('created_at', 'desc')
+            // `survey.webinar` se precarga porque la tabla muestra el webinar
+            // al que da seguimiento cada respuesta.
+            ->modifyQueryUsing(fn (Builder $query) => $query->with('survey.webinar'))
             ->columns([
                 TextColumn::make('survey.title')
                     ->label('Survey')
                     ->sortable()
                     ->searchable(),
+                TextColumn::make('survey.webinar.title')
+                    ->label('Webinar')
+                    ->placeholder('—')
+                    ->searchable()
+                    ->toggleable(),
                 TextColumn::make('name')
                     ->label('Name')
                     ->placeholder('Anonymous')
@@ -83,10 +92,20 @@ class SurveyResponsesTable
                             ->options(fn () => Client::query()->pluck('name', 'id')->all())
                             ->live()
                             ->afterStateUpdated(fn (Set $set) => $set('survey_id', null)),
+                        Select::make('webinar_id')
+                            ->label('Webinar')
+                            ->options(fn (Get $get): array => Webinar::query()
+                                ->where('client_id', $get('client_id'))
+                                ->pluck('title', 'id')
+                                ->all())
+                            ->live()
+                            ->afterStateUpdated(fn (Set $set) => $set('survey_id', null))
+                            ->visible(fn (Get $get) => (bool) $get('client_id')),
                         Select::make('survey_id')
                             ->label('Survey')
                             ->options(fn (Get $get): array => Survey::query()
                                 ->where('client_id', $get('client_id'))
+                                ->when($get('webinar_id'), fn ($query, $webinarId) => $query->where('webinar_id', $webinarId))
                                 ->pluck('title', 'id')
                                 ->all())
                             ->visible(fn (Get $get) => (bool) $get('client_id')),
@@ -98,6 +117,13 @@ class SurveyResponsesTable
                                 fn (Builder $query, $clientId) => $query->whereHas(
                                     'survey',
                                     fn (Builder $q) => $q->where('client_id', $clientId)
+                                )
+                            )
+                            ->when(
+                                $data['webinar_id'] ?? null,
+                                fn (Builder $query, $webinarId) => $query->whereHas(
+                                    'survey',
+                                    fn (Builder $q) => $q->where('webinar_id', $webinarId)
                                 )
                             )
                             ->when(
@@ -186,6 +212,7 @@ class SurveyResponsesTable
     {
         $columns = [
             Column::make('survey.title')->heading('Survey'),
+            Column::make('survey.webinar.title')->heading('Webinar'),
             Column::make('name')->heading('Name'),
             Column::make('email')->heading('Email'),
             Column::make('phone')->heading('Phone'),

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Clients\Schemas;
 
+use App\Filament\Schemas\ThemeSection;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -45,6 +46,10 @@ class ClientForm
                     ->helperText('Override the global System User Access Token.')
                     ->password() // Hide token content
                     ->maxLength(5000), // Tokens can be long
+                ThemeSection::forClient()
+                    ->columnSpanFull()
+                    ->collapsible(),
+
                 Repeater::make('socialMedia')
                     ->relationship('socialMedia')
                     ->schema([

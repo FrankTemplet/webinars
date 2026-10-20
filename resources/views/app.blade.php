@@ -39,6 +39,12 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
 
+        {{-- CSS libre que el panel guarda por webinar o encuesta. Va aquí para
+             que llegue con el documento y no cause un parpadeo de estilos. --}}
+        @isset($custom_css)
+            <style>{!! $custom_css !!}</style>
+        @endisset
+
         @routes
         @vite(['resources/js/app.ts', "resources/js/pages/{$page['component']}.vue"])
         @inertiaHead

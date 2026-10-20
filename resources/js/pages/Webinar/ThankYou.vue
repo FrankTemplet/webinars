@@ -16,6 +16,12 @@ interface TrackingScript {
     enabled: boolean;
 }
 
+interface Theme {
+    vars: Record<string, string>;
+    font_url?: string | null;
+    custom_css?: string | null;
+}
+
 interface Webinar {
     slug: string;
     title: string;
@@ -28,6 +34,7 @@ interface Webinar {
     thank_you_cta_text?: string;
     thank_you_cta_url?: string;
     tracking_scripts?: TrackingScript[];
+    theme: Theme;
 }
 
 interface Props {
@@ -37,6 +44,8 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+const themeVars = computed(() => props.webinar.theme.vars);
 
 const title = computed(() => props.webinar.thank_you_title || '¡Gracias por registrarte!');
 const message = computed(() => props.webinar.thank_you_message || '<p>Recibirás un correo con los detalles del webinar.</p>');
@@ -77,10 +86,12 @@ onMounted(() => {
 <template>
     <Head :title="webinar.meta_title || webinar.title">
         <meta name="description" :content="webinar.meta_description" />
-        <link rel="icon" type="image/x-icon" :href="`/storage/${client.logo}`" v-if="client.logo">
+        <link rel="icon" :href="`/storage/${client.logo}`" v-if="client.logo">
+        <link rel="preconnect" href="https://fonts.bunny.net">
+        <link v-if="webinar.theme.font_url" rel="stylesheet" :href="webinar.theme.font_url">
     </Head>
 
-    <div class="font-roboto text-[#656668]">
+    <div class="thankyou-page" :style="themeVars">
         <main class="min-h-screen relative flex items-center justify-center px-6 py-12">
             <!-- Full-screen background image -->
             <div class="absolute inset-0 bg-cover bg-center bg-no-repeat"
@@ -92,24 +103,24 @@ onMounted(() => {
             <div class="absolute inset-0 bg-black/30"></div>
 
             <!-- Thank you card -->
-            <div class="relative z-10 w-full max-w-xl bg-white rounded-[5px] shadow-xl px-8 md:px-12 py-10 text-center">
+            <div class="thankyou-card relative z-10 w-full max-w-xl shadow-xl px-8 md:px-12 py-10 text-center">
                 <div class="flex justify-center mb-6">
                     <img v-if="webinar.header_logo" :src="`/storage/${webinar.header_logo}`" alt="Logo" class="h-[60px] w-auto">
                     <img v-else-if="client.logo" :src="`/storage/${client.logo}`" alt="Client Logo" class="h-[60px] w-auto">
                 </div>
 
-                <h1 class="text-[#041B36] font-bold text-[30px] md:text-[34px] leading-[1.1] mb-4 font-roboto">
+                <h1 class="thankyou-title font-bold text-[30px] md:text-[34px] leading-[1.1] mb-4">
                     {{ title }}
                 </h1>
 
-                <div class="text-[#656668] text-[16px] mb-8 font-roboto" v-html="message"></div>
+                <div class="text-[16px] mb-8" v-html="message"></div>
 
                 <a :href="ctaUrl"
-                   class="inline-block w-auto text-center align-middle cursor-pointer select-none border border-transparent px-[1.75rem] py-[0.625rem] text-[1rem] leading-[1.5] rounded-none uppercase font-bold text-white bg-[#00B0D3] hover:bg-white hover:text-[#00B0D3] hover:border-[#00B0D3] transition-colors duration-150 ease-in-out">
+                   class="btn-cta inline-block w-auto text-center align-middle cursor-pointer select-none border px-[1.75rem] py-[0.625rem] text-[1rem] leading-[1.5] transition-colors duration-150 ease-in-out">
                     {{ ctaText }}
                 </a>
 
-                <p class="text-[12px] text-[#656668] mt-8 mb-0">
+                <p class="text-[12px] mt-8 mb-0">
                     {{ client.footer || `Copyright © | ${new Date().getFullYear()} ${client.name} | All rights reserved.` }}
                 </p>
             </div>
@@ -118,7 +129,33 @@ onMounted(() => {
 </template>
 
 <style>
-.font-roboto {
-    font-family: 'Roboto', sans-serif;
+/* Mismos tokens que la landing del webinar. */
+.thankyou-page {
+    font-family: var(--font);
+    color: var(--text);
+}
+
+.thankyou-card {
+    background-color: var(--bg);
+    border-radius: var(--radius-field);
+}
+
+.thankyou-title {
+    color: var(--heading);
+}
+
+.btn-cta {
+    color: var(--accent-text);
+    background-color: var(--accent);
+    border-color: var(--accent);
+    border-radius: var(--radius-button);
+    text-transform: var(--button-transform, uppercase);
+}
+
+.btn-cta:hover,
+.btn-cta:focus-visible {
+    color: var(--accent);
+    background-color: var(--bg);
+    border-color: var(--accent);
 }
 </style>

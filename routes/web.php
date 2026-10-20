@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PagePreviewController;
 use App\Http\Controllers\SurveyController;
 use App\Http\Controllers\WebinarController;
 use Illuminate\Support\Facades\Route;
@@ -7,6 +8,26 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return redirect('/admin');
 });
+
+/*
+|--------------------------------------------------------------------------
+| PREVIEW DEL PANEL
+|--------------------------------------------------------------------------
+|
+| Renderizan la página pública dentro del iframe del formulario. Van antes
+| del grupo con el catch-all /{client}/{slug} para que no se las trague, y
+| exigen sesión porque muestran contenido todavía sin publicar.
+|
+*/
+
+Route::middleware(['web', 'auth'])
+    ->prefix('previews')
+    ->name('preview.')
+    ->group(function () {
+        Route::get('/webinars/{webinar?}', [PagePreviewController::class, 'webinar'])->name('webinar');
+        Route::get('/surveys/{survey?}', [PagePreviewController::class, 'survey'])->name('survey');
+        Route::get('/clients/{client}', [PagePreviewController::class, 'client'])->name('client');
+    });
 
 /*
 |--------------------------------------------------------------------------

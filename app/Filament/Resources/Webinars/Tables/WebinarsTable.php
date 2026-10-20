@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Webinars\Tables;
 
+use App\Filament\Actions\OpenLiveAction;
+use App\Filament\Actions\PreviewAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -14,10 +16,14 @@ class WebinarsTable
     public static function configure(Table $table): Table
     {
         return $table
+            // `client` se precarga porque las acciones de preview y live
+            // arman la URL pública con el slug del cliente.
+            ->modifyQueryUsing(fn ($query) => $query->with('client'))
             ->columns([
-                TextColumn::make('client_id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('client.name')
+                    ->label('Client')
+                    ->sortable()
+                    ->searchable(),
                 TextColumn::make('title')
                     ->searchable(),
                 TextColumn::make('subtitle')
@@ -42,6 +48,8 @@ class WebinarsTable
                 //
             ])
             ->recordActions([
+                PreviewAction::make(),
+                OpenLiveAction::make(),
                 EditAction::make(),
             ])
             ->toolbarActions([

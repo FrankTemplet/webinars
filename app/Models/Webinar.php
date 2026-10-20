@@ -2,14 +2,22 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPublicPage;
+use App\Models\Concerns\HasTheme;
 use App\Models\Scopes\ClientAccessScope;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
 
 class Webinar extends Model
 {
+    use HasPublicPage;
+    use HasTheme;
+
     protected $fillable = [
         'client_id', 'title', 'show_title', 'subtitle', 'description', 'slug', 'zoom_webinar_id', 'hero_image', 'header_logo',
         'form_schema', 'chartable_fields', 'tracking_scripts', 'meta_title', 'meta_description', 'clay_webhook_url',
+        'accent_color', 'accent_text_color', 'background_color',
+        'button_radius', 'field_radius', 'custom_css',
         'meta_campaign_id', 'campaign', 'ad_spend', 'last_ad_spend_sync_at',
         'thank_you_enabled', 'thank_you_title', 'thank_you_message', 'thank_you_image',
         'thank_you_cta_text', 'thank_you_cta_url',
@@ -22,6 +30,8 @@ class Webinar extends Model
         'chartable_fields' => 'array',
         'tracking_scripts' => 'array',
         'ad_spend' => 'float',
+        'button_radius' => 'integer',
+        'field_radius' => 'integer',
         'last_ad_spend_sync_at' => 'datetime',
     ];
 
@@ -43,5 +53,71 @@ class Webinar extends Model
     public function surveys()
     {
         return $this->hasMany(Survey::class);
+    }
+
+    /**
+     * Campos de la landing. Se enumeran para no publicar el webhook de Clay
+     * ni el token de la API de conversiones de Meta, que viven en el modelo.
+     */
+    public function toPublicArray(bool $forEditor = false): array
+    {
+        return array_merge(
+            $this->only([
+                'slug', 'title', 'show_title', 'subtitle', 'description',
+                'meta_title', 'meta_description', 'hero_image', 'header_logo',
+                'form_schema',
+            ]),
+            [
+                'tracking_scripts' => $this->publicTrackingScripts(),
+                'theme' => $this->theme($forEditor),
+            ],
+        );
+    }
+
+    /**
+     * Los pixeles sí se renderizan en el navegador, pero el access token de
+     * la Conversions API es de uso exclusivamente servidor.
+     */
+    public function publicTrackingScripts(): array
+    {
+        return collect($this->tracking_scripts ?? [])
+            ->map(fn (array $script) => Arr::except($script, ['access_token']))
+            ->values()
+            ->all();
+    }
+
+    protected function themeParent(): ?Client
+    {
+        return $this->client;
+    }
+
+    protected function publicRouteName(): string
+    {
+        return 'webinar.show';
+    }
+
+    protected function publicPathPrefix(): string
+    {
+        return 'webinars';
+    }
+
+    /**
+     * Valores con los que nació la landing, para los clientes que no
+     * configuraron su marca: cian, títulos azul oscuro, texto gris y los
+     * radios que traía el formulario.
+     */
+    protected function themeDefaults(): array
+    {
+        return [
+            '--font-family' => 'Roboto',
+            '--accent' => '#00B0D3',
+            '--accent-text' => '#FFFFFF',
+            '--heading' => '#041B36',
+            '--subtitle' => '#1A1A1A',
+            '--text' => '#656668',
+            '--bg' => '#FFFFFF',
+            '--radius-button' => '0px',
+            '--radius-field' => '5px',
+        ];
     }
 }
