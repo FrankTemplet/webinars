@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources\SurveyResponses\Tables;
 
+use App\Filament\Resources\SurveyResponses\Schemas\SurveyResponseForm;
 use App\Models\Client;
 use App\Models\Survey;
+use App\Models\SurveyResponse;
 use App\Models\Webinar;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -141,7 +143,8 @@ class SurveyResponsesTable
                 ]),
             ])
             ->recordActions([
-                ViewAction::make(),
+                ViewAction::make()
+                    ->mutateRecordDataUsing(fn (array $data, SurveyResponse $record): array => SurveyResponseForm::withRelatedTitles($data, $record)),
                 DeleteAction::make(),
             ])
             ->toolbarActions([

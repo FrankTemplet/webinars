@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\SurveyResponses\Schemas;
 
+use App\Models\SurveyResponse;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Textarea;
@@ -12,16 +13,34 @@ use Filament\Schemas\Schema;
 
 class SurveyResponseForm
 {
+    /**
+     * Los títulos de la encuesta y del webinar se copian al estado del
+     * formulario: Filament lo llena con los atributos del registro, que no
+     * incluyen relaciones, así que `survey.title` llegaría siempre vacío.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function withRelatedTitles(array $data, SurveyResponse $record): array
+    {
+        $data['survey_title'] = $record->survey?->title;
+        $data['webinar_title'] = $record->survey?->webinar?->title;
+
+        return $data;
+    }
+
     public static function configure(Schema $schema): Schema
     {
         return $schema
             ->components([
                 Section::make('Contact')
                     ->schema([
-                        TextInput::make('survey.title')->label('Survey')->disabled(),
-                        TextInput::make('survey.webinar.title')
+                        TextInput::make('survey_title')
+                            ->label('Survey')
+                            ->disabled(),
+                        TextInput::make('webinar_title')
                             ->label('Webinar')
-                            ->placeholder('Not linked to a webinar')
+                            ->placeholder('No webinar linked')
                             ->disabled(),
                         TextInput::make('name')->label('Name')->disabled(),
                         TextInput::make('email')->label('Email')->disabled(),

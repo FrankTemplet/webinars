@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\SurveyResponses\Pages\ListSurveyResponses;
+use App\Filament\Resources\SurveyResponses\Schemas\SurveyResponseForm;
 use App\Filament\Resources\Webinars\Pages\CreateWebinar;
 use App\Filament\Resources\Webinars\Pages\EditWebinar;
 use App\Models\Client;
@@ -111,6 +113,67 @@ class AdminPublicPageActionsTest extends TestCase
         $response->assertSee('Button Radius');
         // La tipografía y los colores de texto son del cliente.
         $response->assertDontSee('Body Text');
+    }
+
+    public function test_the_response_detail_resolves_the_survey_and_webinar_titles(): void
+    {
+        [, $webinar, $survey] = $this->seedClientWithContent();
+
+        $response = SurveyResponse::create([
+            'survey_id' => $survey->id,
+            'name' => 'Ana',
+            'email' => 'ana@example.com',
+            'experience_rating' => 5,
+            'wants_review' => true,
+        ]);
+
+        $data = SurveyResponseForm::withRelatedTitles([], $response->fresh());
+
+        $this->assertSame($survey->title, $data['survey_title']);
+        $this->assertSame($webinar->title, $data['webinar_title']);
+    }
+
+    public function test_a_response_whose_survey_has_no_webinar_leaves_it_empty(): void
+    {
+        $client = Client::create(['name' => 'Escala', 'slug' => 'escala']);
+
+        $survey = Survey::create([
+            'client_id' => $client->id,
+            'title' => 'Suelta',
+            'slug' => 'suelta',
+        ]);
+
+        $response = SurveyResponse::create([
+            'survey_id' => $survey->id,
+            'experience_rating' => 4,
+            'wants_review' => false,
+        ]);
+
+        $data = SurveyResponseForm::withRelatedTitles([], $response->fresh());
+
+        $this->assertSame('Suelta', $data['survey_title']);
+        $this->assertNull($data['webinar_title']);
+    }
+
+    public function test_the_response_modal_is_filled_with_both_titles(): void
+    {
+        $this->actingAs($this->admin());
+        [, $webinar, $survey] = $this->seedClientWithContent();
+
+        $response = SurveyResponse::create([
+            'survey_id' => $survey->id,
+            'name' => 'Ana',
+            'email' => 'ana@example.com',
+            'experience_rating' => 5,
+            'wants_review' => true,
+        ]);
+
+        Livewire::test(ListSurveyResponses::class)
+            ->mountTableAction('view', $response)
+            ->assertTableActionDataSet([
+                'survey_title' => $survey->title,
+                'webinar_title' => $webinar->title,
+            ]);
     }
 
     public function test_survey_responses_show_the_linked_webinar(): void
