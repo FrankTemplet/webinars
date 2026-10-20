@@ -17,12 +17,14 @@ class Submission extends Model
         'utm_content',
         'sent_to_clay_at',
         'registered_in_zoom_at',
+        'utms_reconstructed_at',
     ];
 
     protected $casts = [
         'data' => 'array',
         'sent_to_clay_at' => 'datetime',
         'registered_in_zoom_at' => 'datetime',
+        'utms_reconstructed_at' => 'datetime',
     ];
 
     protected static function booted(): void
