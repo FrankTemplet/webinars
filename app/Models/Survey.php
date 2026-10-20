@@ -8,11 +8,13 @@ use App\Models\Scopes\ClientAccessScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Survey extends Model
 {
     use HasPublicPage;
     use HasTheme;
+    use SoftDeletes;
 
     /**
      * Enunciados por defecto de la plantilla de satisfacción.

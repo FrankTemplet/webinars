@@ -6,12 +6,14 @@ use App\Models\Concerns\HasPublicPage;
 use App\Models\Concerns\HasTheme;
 use App\Models\Scopes\ClientAccessScope;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Arr;
 
 class Webinar extends Model
 {
     use HasPublicPage;
     use HasTheme;
+    use SoftDeletes;
 
     protected $fillable = [
         'client_id', 'title', 'show_title', 'subtitle', 'description', 'slug', 'zoom_webinar_id', 'hero_image', 'header_logo',

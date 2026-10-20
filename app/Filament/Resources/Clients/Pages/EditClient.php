@@ -5,6 +5,8 @@ namespace App\Filament\Resources\Clients\Pages;
 use App\Filament\Actions\FormPreviewAction;
 use App\Filament\Resources\Clients\ClientResource;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditClient extends EditRecord
@@ -16,6 +18,8 @@ class EditClient extends EditRecord
         return [
             FormPreviewAction::forClient(),
             DeleteAction::make(),
+            RestoreAction::make(),
+            ForceDeleteAction::make(),
         ];
     }
 }

@@ -6,6 +6,8 @@ use App\Filament\Actions\FormPreviewAction;
 use App\Filament\Actions\OpenLiveAction;
 use App\Filament\Resources\Surveys\SurveyResource;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditSurvey extends EditRecord
@@ -18,6 +20,8 @@ class EditSurvey extends EditRecord
             FormPreviewAction::forSurvey(),
             OpenLiveAction::make(),
             DeleteAction::make(),
+            RestoreAction::make(),
+            ForceDeleteAction::make(),
         ];
     }
 }
