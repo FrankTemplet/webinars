@@ -58,7 +58,10 @@ class WebinarAttendees extends Page implements HasTable
                     ->afterStateUpdated(fn (Set $set) => $set('webinar_id', null)),
                 Select::make('webinar_id')
                     ->label('Webinar')
+                    // Solo los de días anteriores: uno de hoy puede no haber empezado
+                    // todavía y Zoom no tendría reporte que sincronizar.
                     ->options(fn (Get $get) => Webinar::query()
+                        ->whereDate('event_date', '<', today())
                         ->when($get('client_id'), fn ($query, $clientId) => $query->where('client_id', $clientId))
                         ->orderByDesc('event_date')
                         ->get()

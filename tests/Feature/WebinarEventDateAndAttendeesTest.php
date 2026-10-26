@@ -95,9 +95,25 @@ class WebinarEventDateAndAttendeesTest extends TestCase
             ->assertSee('ana@cliente.com');
     }
 
+    public function test_only_webinars_from_before_today_are_offered(): void
+    {
+        $past = $this->webinar(['title' => 'Pasado', 'event_date' => '2026-10-25']);
+        $this->webinar(['title' => 'Hoy', 'event_date' => '2026-10-26']);
+        $this->webinar(['title' => 'Futuro', 'event_date' => '2026-11-19']);
+        $this->webinar(['title' => 'Sin fecha']);
+
+        $options = collect(
+            Livewire::test(WebinarAttendees::class)
+                ->instance()
+                ->callSchemaComponentMethod('form.webinar_id', 'getOptionsForJs')
+        )->pluck('label', 'value')->all();
+
+        $this->assertSame([(string) $past->id => 'Pasado — 25 - 10 - 2026'], $options);
+    }
+
     public function test_a_webinar_without_zoom_says_so_instead_of_offering_sync(): void
     {
-        $webinar = $this->webinar();
+        $webinar = $this->webinar(['event_date' => '2026-07-23']);
 
         Livewire::test(WebinarAttendees::class)
             ->fillForm(['client_id' => $webinar->client_id, 'webinar_id' => $webinar->id])
@@ -107,7 +123,7 @@ class WebinarEventDateAndAttendeesTest extends TestCase
 
     public function test_only_admins_can_sync(): void
     {
-        $webinar = $this->webinar(['zoom_webinar_id' => '86198352801']);
+        $webinar = $this->webinar(['zoom_webinar_id' => '86198352801', 'event_date' => '2026-02-19']);
         $viewer = User::factory()->create(['role' => User::ROLE_VIEWER]);
         $viewer->clients()->attach($webinar->client_id);
         $this->actingAs($viewer);
