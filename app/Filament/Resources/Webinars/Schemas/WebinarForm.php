@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Webinars\Schemas;
 
 use App\Filament\Schemas\ThemeSection;
+use App\Models\Webinar;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
@@ -43,7 +44,19 @@ class WebinarForm
                 Select::make('zoom_webinar_id')
                     ->label('Zoom Webinar')
                     ->helperText("Choose the webinar from Zoom to enable automatic registration.")
-                    ->options(fn () => app(\App\Services\ZoomService::class)->listWebinars())
+                    // Zoom solo lista los próximos; sin el ya guardado, un webinar
+                    // terminado no pasa la validación y el formulario no se guarda.
+                    ->options(function (?Webinar $record) {
+                        $zoom = app(\App\Services\ZoomService::class);
+                        $options = $zoom->listWebinars();
+                        $current = $record?->zoom_webinar_id;
+
+                        if ($current && ! isset($options[$current])) {
+                            $options[$current] = $zoom->webinarLabel($current) ?? "{$current} (finalizado)";
+                        }
+
+                        return $options;
+                    })
                     ->searchable()
                     ->nullable()
                     ->live()

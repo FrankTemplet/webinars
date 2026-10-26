@@ -75,6 +75,27 @@ class ZoomService
     }
 
     /**
+     * Etiqueta de un webinar puntual, aunque ya haya terminado y no salga en
+     * listWebinars(). Null si Zoom no lo encuentra.
+     */
+    public function webinarLabel(string $webinarId): ?string
+    {
+        $token = $this->getAccessToken();
+        if (!$token) return null;
+
+        $response = Http::withToken($token)->get("{$this->baseUrl}/webinars/{$webinarId}");
+
+        if ($response->failed()) {
+            Log::warning('Zoom Get Webinar Failed', ['webinar_id' => $webinarId, 'error' => $response->json()]);
+            return null;
+        }
+
+        $webinar = $response->json();
+
+        return $webinar['topic'] . " ({$webinar['start_time']})";
+    }
+
+    /**
      * Register a person for a webinar
      */
     public function registerRegistrant(string $webinarId, array $userData): bool
