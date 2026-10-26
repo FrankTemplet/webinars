@@ -90,6 +90,25 @@ class WebinarAttendees extends Page implements HasTable
         return (bool) $this->selectedWebinar()?->attendees()->exists();
     }
 
+    /**
+     * Cuándo se trajeron por última vez y si coinciden con lo que Zoom reportó,
+     * para saber si lo que se ve está al día.
+     */
+    public function syncSummary(): ?string
+    {
+        $webinar = $this->selectedWebinar();
+
+        if (! $webinar?->attendees_synced_at) {
+            return 'Synced before sync tracking existed. Sync again to confirm these are up to date.';
+        }
+
+        $saved = $webinar->attendees()->count();
+        $people = $webinar->attendees()->distinct()->count('email');
+
+        return "Last synced {$webinar->attendees_synced_at->format('d - m - Y H:i')} UTC · "
+            ."{$saved} of {$webinar->zoom_participants_count} Zoom sessions saved · {$people} people";
+    }
+
     public function table(Table $table): Table
     {
         return $table
@@ -123,14 +142,18 @@ class WebinarAttendees extends Page implements HasTable
             ->visible(fn () => auth()->user()->isAdmin() && filled($this->selectedWebinar()?->zoom_webinar_id))
             ->action(function () {
                 $webinar = $this->selectedWebinar();
+                $previousSync = $webinar->attendees_synced_at;
 
                 SyncAttendeesJob::dispatchSync($webinar->id);
 
+                $webinar->refresh();
                 $count = $webinar->attendees()->count();
 
-                $count > 0
-                    ? Notification::make()->title("Synced {$count} attendees from Zoom")->success()->send()
-                    : Notification::make()->title('Zoom returned no attendees for this webinar')->warning()->send();
+                match (true) {
+                    $webinar->attendees_synced_at == $previousSync => Notification::make()->title('Zoom\'s report could not be read. Nothing was changed.')->danger()->send(),
+                    $count > 0 => Notification::make()->title("Synced {$count} attendees from Zoom")->success()->send(),
+                    default => Notification::make()->title('Zoom returned no attendees for this webinar')->warning()->send(),
+                };
             });
     }
 }

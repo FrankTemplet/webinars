@@ -56,3 +56,15 @@
 {"ts":1793057049054,"files":["/Users/frank/templet/webinars/tests/Feature/WebinarEventDateAndAttendeesTest.php"]}
 {"ts":1793057058349,"files":["/Users/frank/templet/webinars/tests/Feature/WebinarEventDateAndAttendeesTest.php"]}
 {"ts":1793057469002,"files":["/Users/frank/templet/webinars/app/Filament/Pages/WebinarAttendees.php"]}
+{"ts":1793057965051,"files":["/Users/frank/templet/webinars/app/Jobs/SyncAttendeesJob.php"]}
+{"ts":1793057966293,"files":["/Users/frank/templet/webinars/app/Jobs/SyncAttendeesJob.php"]}
+{"ts":1793057972967,"files":["/Users/frank/templet/webinars/app/Services/ZoomService.php"]}
+{"ts":1793057984081,"files":["/Users/frank/templet/webinars/database/migrations/2026_10_26_130000_add_attendee_sync_columns_to_webinars_table.php"]}
+{"ts":1793058005075,"files":["/Users/frank/templet/webinars/app/Filament/Pages/WebinarAttendees.php"]}
+{"ts":1793058006369,"files":["/Users/frank/templet/webinars/app/Filament/Pages/WebinarAttendees.php"]}
+{"ts":1793058007644,"files":["/Users/frank/templet/webinars/resources/views/filament/pages/webinar-attendees.blade.php"]}
+{"ts":1793058018351,"files":["/Users/frank/templet/webinars/app/Filament/Pages/WebinarAttendees.php"]}
+{"ts":1793058042870,"files":["/Users/frank/templet/webinars/tests/Feature/AttendeeSyncTest.php"]}
+{"ts":1793058102580,"files":["/Users/frank/templet/webinars/app/Jobs/SyncAttendeesJob.php"]}
+{"ts":1793058103950,"files":["/Users/frank/templet/webinars/tests/Feature/AttendeeSyncTest.php"]}
+{"ts":1793059085584,"files":["/Users/frank/templet/webinars/tests/Feature/SubmissionAccessTest.php"]}

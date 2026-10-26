@@ -18,7 +18,7 @@ class Webinar extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'client_id', 'title', 'show_title', 'subtitle', 'description', 'slug', 'event_date', 'zoom_webinar_id', 'hero_image', 'header_logo',
+        'client_id', 'title', 'show_title', 'subtitle', 'description', 'slug', 'event_date', 'zoom_webinar_id', 'attendees_synced_at', 'zoom_participants_count', 'hero_image', 'header_logo',
         'form_schema', 'chartable_fields', 'tracking_scripts', 'meta_title', 'meta_description', 'clay_webhook_url',
         'accent_color', 'accent_text_color', 'background_color',
         'button_radius', 'field_radius', 'custom_css',
@@ -38,6 +38,8 @@ class Webinar extends Model
         'field_radius' => 'integer',
         'last_ad_spend_sync_at' => 'datetime',
         'event_date' => 'date',
+        'attendees_synced_at' => 'datetime',
+        'zoom_participants_count' => 'integer',
     ];
 
     protected static function booted(): void

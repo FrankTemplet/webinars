@@ -246,13 +246,14 @@ class ZoomService
 
     /**
      * Get full webinar participants list (paginated through Zoom's report API).
+     * Null when any page fails, so a partial list is never taken as complete.
      *
-     * @return array<int, array<string, mixed>>
+     * @return array<int, array<string, mixed>>|null
      */
-    public function getWebinarParticipantsDetailed(string $webinarId): array
+    public function getWebinarParticipantsDetailed(string $webinarId): ?array
     {
         $token = $this->getAccessToken();
-        if (!$token) return [];
+        if (!$token) return null;
 
         $participants = [];
         $nextPageToken = null;
@@ -271,7 +272,9 @@ class ZoomService
                     'webinar_id' => $webinarId,
                     'error' => $response->json(),
                 ]);
-                break;
+
+                // Una lista a medias se confundiría con el reporte completo.
+                return null;
             }
 
             $data = $response->json();

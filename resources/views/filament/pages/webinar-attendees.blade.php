@@ -8,9 +8,16 @@
             <p class="text-sm text-gray-500 dark:text-gray-400">Select a client and a webinar to see its attendees.</p>
         </x-filament::section>
     @elseif ($this->hasAttendees())
-        @if ($webinar->eventDateSummary())
-            <p class="text-sm text-gray-500 dark:text-gray-400">{{ $webinar->eventDateSummary() }}</p>
-        @endif
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="text-sm text-gray-500 dark:text-gray-400">
+                @if ($webinar->eventDateSummary())
+                    <p>{{ $webinar->eventDateSummary() }}</p>
+                @endif
+                <p>{{ $this->syncSummary() }}</p>
+            </div>
+
+            {{ $this->syncAction }}
+        </div>
 
         {{ $this->table }}
     @elseif (filled($webinar->zoom_webinar_id))

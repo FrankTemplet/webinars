@@ -38,7 +38,9 @@ class SubmissionAccessTest extends TestCase
 
         $response = $this->get('/admin/submissions');
         $response->assertDontSee('Clients');
-        $response->assertDontSee('Webinars');
+        // El recurso Webinars no; la página de asistentes sí, filtrada a sus clientes.
+        $response->assertDontSee('href="'.url('/admin/webinars').'"', false);
+        $response->assertSee('href="'.url('/admin/webinar-attendees').'"', false);
         $response->assertDontSee('Users');
     }
 
