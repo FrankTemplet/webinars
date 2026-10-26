@@ -51,3 +51,7 @@
 {"ts":1793055682462,"files":["/Users/frank/templet/webinars/app/Jobs/SyncAttendeesJob.php"]}
 {"ts":1793055721113,"files":["/Users/frank/templet/webinars/tests/Feature/WebinarZoomSelectTest.php"]}
 {"ts":1793055722362,"files":["/Users/frank/templet/webinars/tests/Feature/WebinarEventDateAndAttendeesTest.php"]}
+{"ts":1793057029058,"files":["/Users/frank/templet/webinars/app/Filament/Pages/WebinarAttendees.php"]}
+{"ts":1793057030419,"files":["/Users/frank/templet/webinars/resources/views/filament/pages/webinar-attendees.blade.php"]}
+{"ts":1793057049054,"files":["/Users/frank/templet/webinars/tests/Feature/WebinarEventDateAndAttendeesTest.php"]}
+{"ts":1793057058349,"files":["/Users/frank/templet/webinars/tests/Feature/WebinarEventDateAndAttendeesTest.php"]}

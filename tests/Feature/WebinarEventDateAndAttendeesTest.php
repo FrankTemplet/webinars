@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Pages\WebinarAttendees;
 use App\Filament\Resources\Webinars\Pages\EditWebinar;
-use App\Filament\Resources\Webinars\RelationManagers\AttendeesRelationManager;
 use App\Jobs\SyncAttendeesJob;
 use App\Models\Attendee;
 use App\Models\Client;
@@ -79,14 +79,42 @@ class WebinarEventDateAndAttendeesTest extends TestCase
         $this->assertSame(1, $webinar->fresh()->uniqueExternalAttendees());
     }
 
-    public function test_the_attendees_tab_lists_them_and_syncs_from_zoom(): void
+    public function test_the_attendees_page_offers_sync_until_there_are_attendees(): void
     {
-        $webinar = $this->webinar(['zoom_webinar_id' => '86831590568']);
+        $webinar = $this->webinar(['zoom_webinar_id' => '86198352801', 'event_date' => '2026-02-19']);
 
-        Livewire::test(AttendeesRelationManager::class, ['ownerRecord' => $webinar, 'pageClass' => EditWebinar::class])
-            ->callTableAction('syncFromZoom')
+        Livewire::test(WebinarAttendees::class)
+            ->assertSee('Select a client and a webinar')
+            ->fillForm(['client_id' => $webinar->client_id, 'webinar_id' => $webinar->id])
+            ->assertSee('been synced from Zoom yet')
+            ->assertActionVisible('sync')
+            ->callAction('sync')
+            ->assertDontSee('been synced from Zoom yet')
+            ->assertSee('Took place on 19 - 02 - 2026')
             ->assertCanSeeTableRecords(Attendee::all())
             ->assertSee('ana@cliente.com');
+    }
+
+    public function test_a_webinar_without_zoom_says_so_instead_of_offering_sync(): void
+    {
+        $webinar = $this->webinar();
+
+        Livewire::test(WebinarAttendees::class)
+            ->fillForm(['client_id' => $webinar->client_id, 'webinar_id' => $webinar->id])
+            ->assertSee('has no Zoom webinar linked')
+            ->assertActionHidden('sync');
+    }
+
+    public function test_only_admins_can_sync(): void
+    {
+        $webinar = $this->webinar(['zoom_webinar_id' => '86198352801']);
+        $viewer = User::factory()->create(['role' => User::ROLE_VIEWER]);
+        $viewer->clients()->attach($webinar->client_id);
+        $this->actingAs($viewer);
+
+        Livewire::test(WebinarAttendees::class)
+            ->fillForm(['webinar_id' => $webinar->id])
+            ->assertActionHidden('sync');
     }
 
     public function test_the_scheduled_sync_skips_webinars_older_than_thirty_days(): void
