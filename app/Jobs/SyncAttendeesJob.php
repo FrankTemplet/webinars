@@ -14,11 +14,13 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Descarga de Zoom los participantes de los webinars y los guarda en attendees.
- * Sin webinarId sincroniza todos los que tengan zoom_webinar_id.
+ * Sin webinarId sincroniza los que tengan zoom_webinar_id y fecha reciente.
  */
 class SyncAttendeesJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    private const SYNC_WINDOW_DAYS = 30;
 
     public function __construct(public ?int $webinarId = null) {}
 
@@ -28,6 +30,11 @@ class SyncAttendeesJob implements ShouldQueue
             ->whereNotNull('zoom_webinar_id')
             ->where('zoom_webinar_id', '!=', '')
             ->when($this->webinarId, fn ($q) => $q->where('id', $this->webinarId))
+            // En la corrida programada, solo los de los últimos 30 días: los
+            // anteriores ya no cambian. Sin fecha se siguen sincronizando.
+            ->when(! $this->webinarId, fn ($q) => $q->where(fn ($q) => $q
+                ->whereNull('event_date')
+                ->orWhereBetween('event_date', [today()->subDays(self::SYNC_WINDOW_DAYS), today()])))
             ->get();
 
         foreach ($webinars as $webinar) {

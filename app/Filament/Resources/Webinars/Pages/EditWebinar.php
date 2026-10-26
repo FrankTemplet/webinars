@@ -14,6 +14,11 @@ class EditWebinar extends EditRecord
 {
     protected static string $resource = WebinarResource::class;
 
+    public function getSubheading(): ?string
+    {
+        return $this->getRecord()->eventDateSummary();
+    }
+
     protected function getHeaderActions(): array
     {
         return [

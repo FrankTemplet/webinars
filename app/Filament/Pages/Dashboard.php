@@ -9,7 +9,6 @@ use App\Filament\Widgets\UtmSourcesChart;
 use App\Models\Client;
 use App\Models\Webinar;
 use App\Models\Submission;
-use App\Services\ZoomService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Filament\Actions\Action;
@@ -54,7 +53,7 @@ class Dashboard extends BaseDashboard
                             ->searchable()
                             ->placeholder('All webinars')
                             ->reactive()
-                            // Ajustar el rango al periodo en que el webinar recibió registros;
+                            // Ajustar el rango a los registros del webinar hasta su fecha;
                             // con el default de 30 días los webinars viejos salían vacíos.
                             ->afterStateUpdated(function (callable $set, $state) {
                                 if (! $state) {
@@ -65,9 +64,13 @@ class Dashboard extends BaseDashboard
                                     ->selectRaw('MIN(created_at) as first_at, MAX(created_at) as last_at')
                                     ->first();
 
-                                if ($range?->first_at) {
-                                    $set('startDate', Carbon::parse($range->first_at)->toDateString());
-                                    $set('endDate', Carbon::parse($range->last_at)->toDateString());
+                                $dates = collect([$range?->first_at, $range?->last_at, Webinar::find($state)?->event_date])
+                                    ->filter()
+                                    ->map(fn ($date) => Carbon::parse($date));
+
+                                if ($dates->isNotEmpty()) {
+                                    $set('startDate', $dates->min()->toDateString());
+                                    $set('endDate', $dates->max()->toDateString());
                                 }
                             }),
                     ])
@@ -154,7 +157,8 @@ class Dashboard extends BaseDashboard
 
         // Obtener nombres para los filtros
         $clientName = $clientId ? Client::find($clientId)?->name : null;
-        $webinarTitle = $webinarId ? Webinar::find($webinarId)?->title : null;
+        $webinar = $webinarId ? Webinar::find($webinarId) : null;
+        $webinarTitle = $webinar?->title;
 
         // Preparar query base
         $query = Submission::query();
@@ -188,14 +192,7 @@ class Dashboard extends BaseDashboard
             ->whereNull('utm_content')
             ->count();
 
-        $webinarAttendance = 0;
-        if ($webinarId) {
-            $webinar = Webinar::find($webinarId);
-            if ($webinar && $webinar->zoom_webinar_id) {
-                $zoomService = app(ZoomService::class);
-                $webinarAttendance = $zoomService->getWebinarParticipants($webinar->zoom_webinar_id);
-            }
-        }
+        $webinarAttendance = $webinar?->uniqueExternalAttendees() ?? 0;
 
         $registeredLeads = (clone $query)
             ->where(function ($q) {
@@ -257,6 +254,7 @@ class Dashboard extends BaseDashboard
                 'endDate' => $endDate,
                 'clientName' => $clientName,
                 'webinarTitle' => $webinarTitle,
+                'webinarDate' => $webinar?->eventDateSummary(),
             ],
             'stats' => [
                 'totalSubmissions' => $totalSubmissions,

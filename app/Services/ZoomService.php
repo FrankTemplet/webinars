@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
@@ -46,53 +47,96 @@ class ZoomService
     }
 
     /**
-     * List all webinars for the account
+     * Opciones para el select: los webinars próximos de la cuenta. Los que ya
+     * pasaron se encuentran por ID con findWebinar().
      */
     public function listWebinars(): array
     {
-        $token = $this->getAccessToken();
-        if (!$token) return [];
-
-        $response = Http::withToken($token)
-            ->get("{$this->baseUrl}/users/me/webinars", [
-                'type' => 'upcoming',
-                'page_size' => 300,
-            ]);
-
-        if ($response->failed()) {
-            Log::error('Zoom List Webinars Failed', $response->json());
-            return [];
-        }
-
-        $webinars = $response->json()['webinars'] ?? [];
-
         $options = [];
-        foreach ($webinars as $webinar) {
-            $options[$webinar['id']] = $webinar['topic'] . " ({$webinar['start_time']})";
+        foreach ($this->upcomingWebinars() as $webinar) {
+            $options[$webinar['id']] = $this->formatLabel($webinar);
         }
 
         return $options;
     }
 
     /**
-     * Etiqueta de un webinar puntual, aunque ya haya terminado y no salga en
-     * listWebinars(). Null si Zoom no lo encuentra.
+     * Un webinar puntual, aunque Zoom ya lo haya expirado. Null si no existe.
      */
-    public function webinarLabel(string $webinarId): ?string
+    public function findWebinar(string $webinarId): ?array
     {
+        $listed = collect($this->upcomingWebinars())->firstWhere('id', (int) $webinarId);
+        if ($listed) return $listed;
+
         $token = $this->getAccessToken();
         if (!$token) return null;
 
-        $response = Http::withToken($token)->get("{$this->baseUrl}/webinars/{$webinarId}");
+        // Zoom responde 404 en /webinars cuando el webinar expiró; el reporte
+        // sigue existiendo y es lo que usa la sincronización de asistentes.
+        foreach (["webinars/{$webinarId}", "report/webinars/{$webinarId}"] as $path) {
+            $response = Http::withToken($token)->get("{$this->baseUrl}/{$path}");
 
-        if ($response->failed()) {
-            Log::warning('Zoom Get Webinar Failed', ['webinar_id' => $webinarId, 'error' => $response->json()]);
-            return null;
+            if ($response->successful()) {
+                return $response->json();
+            }
         }
 
-        $webinar = $response->json();
+        Log::warning('Zoom Get Webinar Failed', ['webinar_id' => $webinarId, 'error' => $response->json()]);
 
-        return $webinar['topic'] . " ({$webinar['start_time']})";
+        return null;
+    }
+
+    public function webinarLabel(string $webinarId): ?string
+    {
+        $webinar = $this->findWebinar($webinarId);
+
+        return $webinar ? $this->formatLabel($webinar) : null;
+    }
+
+    /**
+     * Día del webinar en su propia zona horaria, para que uno de la tarde no
+     * se recorra al día siguiente en UTC.
+     */
+    public function startDate(array $webinar): Carbon
+    {
+        return Carbon::parse($webinar['start_time'])->setTimezone($webinar['timezone'] ?? config('app.timezone'));
+    }
+
+    protected function upcomingWebinars(): array
+    {
+        return once(function () {
+            $token = $this->getAccessToken();
+            if (!$token) return [];
+
+            $response = Http::withToken($token)
+                ->get("{$this->baseUrl}/users/me/webinars", [
+                    'type' => 'upcoming',
+                    'page_size' => 300,
+                ]);
+
+            if ($response->failed()) {
+                Log::error('Zoom List Webinars Failed', $response->json());
+                return [];
+            }
+
+            return $response->json()['webinars'] ?? [];
+        });
+    }
+
+    protected function hasEnded(array $webinar): bool
+    {
+        $end = isset($webinar['end_time'])
+            ? Carbon::parse($webinar['end_time'])
+            : Carbon::parse($webinar['start_time'])->addMinutes($webinar['duration'] ?? 0);
+
+        return $end->isPast();
+    }
+
+    protected function formatLabel(array $webinar): string
+    {
+        $label = trim($webinar['topic']) . " — {$this->startDate($webinar)->format('d - m - Y')}";
+
+        return $this->hasEnded($webinar) ? "{$label} (Ended)" : $label;
     }
 
     /**

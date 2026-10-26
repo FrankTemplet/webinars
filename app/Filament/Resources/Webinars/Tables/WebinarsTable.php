@@ -35,6 +35,11 @@ class WebinarsTable
                     ->searchable(),
                 TextColumn::make('slug')
                     ->searchable(),
+                TextColumn::make('event_date')
+                    ->label('Date')
+                    ->date('d - m - Y')
+                    ->placeholder('—')
+                    ->sortable(),
                 TextColumn::make('meta_campaign_id')
                     ->label('Meta Campaign')
                     ->searchable()

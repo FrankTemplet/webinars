@@ -5,7 +5,6 @@ namespace App\Filament\Widgets;
 use App\Models\Client;
 use App\Models\Submission;
 use App\Models\Webinar;
-use App\Services\ZoomService;
 use App\Support\InternalEmailDomains;
 use Carbon\Carbon;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
@@ -20,6 +19,13 @@ class StatsOverviewWidget extends BaseWidget
     protected static ?int $sort = 1;
 
     protected int|string|array $columnSpan = 'full';
+
+    protected function getHeading(): ?string
+    {
+        $webinarId = $this->filters['webinar_id'] ?? null;
+
+        return $webinarId ? Webinar::find($webinarId)?->eventDateSummary() : null;
+    }
 
     protected function getColumns(): int
     {
@@ -108,14 +114,8 @@ class StatsOverviewWidget extends BaseWidget
             ->where('utm_source', 'paid')
             ->count();
 
-        // Asistencia al webinar (desde Zoom)
-        $webinarAttendance = 0;
-        if ($webinar->zoom_webinar_id) {
-            $zoomService = app(ZoomService::class);
-            $webinarAttendance = $zoomService->getWebinarParticipants($webinar->zoom_webinar_id);
-        }
+        $webinarAttendance = $webinar->uniqueExternalAttendees();
 
-        // --- NEW META ADS LOGIC ---
         $totalAdSpend = $webinar->ad_spend ?? 0;
 
         // Calculate CPL (Cost Per Lead)
@@ -139,7 +139,7 @@ class StatsOverviewWidget extends BaseWidget
                 ->color('warning'),
 
             Stat::make('Webinar Attendance', number_format($webinarAttendance))
-                ->description('Registered attendance')
+                ->description('Unique attendees, synced from Zoom')
                 ->descriptionIcon('heroicon-m-user-group')
                 ->color('info'),
 

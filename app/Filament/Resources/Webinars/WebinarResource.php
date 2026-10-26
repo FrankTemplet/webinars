@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Webinars;
 use App\Filament\Resources\Webinars\Pages\CreateWebinar;
 use App\Filament\Resources\Webinars\Pages\EditWebinar;
 use App\Filament\Resources\Webinars\Pages\ListWebinars;
+use App\Filament\Resources\Webinars\RelationManagers\AttendeesRelationManager;
 use App\Filament\Resources\Webinars\Schemas\WebinarForm;
 use App\Filament\Resources\Webinars\Tables\WebinarsTable;
 use App\Models\Webinar;
@@ -42,7 +43,7 @@ class WebinarResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            AttendeesRelationManager::class,
         ];
     }
 

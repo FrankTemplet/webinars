@@ -16,6 +16,7 @@ class AttendeeResource extends JsonResource
                 'title' => $this->webinar->title,
                 'slug' => $this->webinar->slug,
                 'campaign_salesforce_field' => $this->webinar->campaign,
+                'event_date' => $this->webinar->event_date?->toDateString(),
                 'client' => $this->when($this->webinar->relationLoaded('client'), fn () => [
                     'id' => $this->webinar->client?->id,
                     'name' => $this->webinar->client?->name,

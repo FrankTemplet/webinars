@@ -4,6 +4,8 @@ namespace App\Filament\Resources\Webinars\Schemas;
 
 use App\Filament\Schemas\ThemeSection;
 use App\Models\Webinar;
+use App\Services\ZoomService;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
@@ -41,26 +43,43 @@ class WebinarForm
                 TextInput::make('slug')
                     ->required()
                     ->maxLength(255),
+                DatePicker::make('event_date')
+                    ->label('Webinar date')
+                    ->helperText('The day the webinar takes place. Filled in from Zoom when you pick its webinar.')
+                    ->displayFormat('d - m - Y')
+                    ->native(false),
                 Select::make('zoom_webinar_id')
                     ->label('Zoom Webinar')
-                    ->helperText("Choose the webinar from Zoom to enable automatic registration.")
-                    // Zoom solo lista los próximos; sin el ya guardado, un webinar
-                    // terminado no pasa la validación y el formulario no se guarda.
-                    ->options(function (?Webinar $record) {
-                        $zoom = app(\App\Services\ZoomService::class);
-                        $options = $zoom->listWebinars();
-                        $current = $record?->zoom_webinar_id;
+                    ->helperText('Choose an upcoming Zoom webinar, or paste the Zoom ID of one that already took place.')
+                    ->options(fn () => app(ZoomService::class)->listWebinars())
+                    ->getSearchResultsUsing(function (string $search) {
+                        $zoom = app(ZoomService::class);
+                        $results = array_filter(
+                            $zoom->listWebinars(),
+                            fn (string $label, $id) => Str::contains("{$label} {$id}", $search, ignoreCase: true),
+                            ARRAY_FILTER_USE_BOTH,
+                        );
 
-                        if ($current && ! isset($options[$current])) {
-                            $options[$current] = $zoom->webinarLabel($current) ?? "{$current} (finalizado)";
+                        // Los que ya pasaron no salen en la lista de Zoom; se encuentran por ID.
+                        $id = preg_replace('/\D/', '', $search);
+                        if (strlen($id) >= 9 && ! isset($results[$id]) && $label = $zoom->webinarLabel($id)) {
+                            $results[$id] = $label;
                         }
 
-                        return $options;
+                        return $results;
                     })
+                    // Un ID ya guardado sigue siendo válido aunque Zoom lo haya borrado;
+                    // uno nuevo solo si Zoom lo reconoce.
+                    ->getOptionLabelUsing(fn ($value, ?Webinar $record) => app(ZoomService::class)->webinarLabel((string) $value)
+                        ?? ($record?->zoom_webinar_id === (string) $value ? "{$value} (no encontrado en Zoom)" : null))
                     ->searchable()
                     ->nullable()
                     ->live()
                     ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                        if ($state && ! $get('event_date') && $zoomWebinar = app(ZoomService::class)->findWebinar((string) $state)) {
+                            $set('event_date', app(ZoomService::class)->startDate($zoomWebinar)->toDateString());
+                        }
+
                         if ($state) {
                             $schema = $get('form_schema') ?? [];
                             $names = array_column($schema, 'name');

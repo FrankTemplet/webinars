@@ -68,6 +68,7 @@ use OpenApi\Attributes as OA;
             description: 'Campo `campaign` del webinar. Es el identificador con el que se enlaza la campaña en Salesforce.',
             example: '7013h000000abcAAA',
         ),
+        new OA\Property(property: 'event_date', type: 'string', format: 'date', nullable: true, description: 'Día en que se realiza el webinar.', example: '2026-07-23'),
         new OA\Property(property: 'client', ref: '#/components/schemas/ClientRef'),
     ],
     type: 'object',

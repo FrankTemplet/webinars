@@ -105,6 +105,7 @@ class StatsController extends ApiController
                     'title' => $webinar->title,
                     'slug' => $webinar->slug,
                     'campaign_salesforce_field' => $webinar->campaign,
+                    'event_date' => $webinar->event_date?->toDateString(),
                     'meta_campaign_id' => $webinar->meta_campaign_id,
                     'zoom_webinar_id' => $webinar->zoom_webinar_id,
                     'client' => [

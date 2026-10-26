@@ -125,6 +125,9 @@
         <div class="filter-item"><strong>Date Range:</strong> {{ $filters['startDate'] ?? 'N/A' }} to {{ $filters['endDate'] ?? 'N/A' }}</div>
         <div class="filter-item"><strong>Client:</strong> {{ $filters['clientName'] ?? 'All clients' }}</div>
         <div class="filter-item"><strong>Webinar:</strong> {{ $filters['webinarTitle'] ?? 'All webinars' }}</div>
+        @if ($filters['webinarDate'])
+            <div class="filter-item"><strong>Date:</strong> {{ $filters['webinarDate'] }}</div>
+        @endif
     </div>
 
     <h2 style="color: #4F46E5; margin-bottom: 15px;">Statistics Overview</h2>
