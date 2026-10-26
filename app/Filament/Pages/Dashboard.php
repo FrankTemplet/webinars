@@ -52,7 +52,24 @@ class Dashboard extends BaseDashboard
                                 return Webinar::pluck('title', 'id');
                             })
                             ->searchable()
-                            ->placeholder('All webinars'),
+                            ->placeholder('All webinars')
+                            ->reactive()
+                            // Ajustar el rango al periodo en que el webinar recibió registros;
+                            // con el default de 30 días los webinars viejos salían vacíos.
+                            ->afterStateUpdated(function (callable $set, $state) {
+                                if (! $state) {
+                                    return;
+                                }
+
+                                $range = Submission::where('webinar_id', $state)
+                                    ->selectRaw('MIN(created_at) as first_at, MAX(created_at) as last_at')
+                                    ->first();
+
+                                if ($range?->first_at) {
+                                    $set('startDate', Carbon::parse($range->first_at)->toDateString());
+                                    $set('endDate', Carbon::parse($range->last_at)->toDateString());
+                                }
+                            }),
                     ])
                     ->columns(4)
                     ->columnSpanFull(),
