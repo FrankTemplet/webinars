@@ -145,7 +145,8 @@ class AttendeeSyncTest extends TestCase
 
         Livewire::test(WebinarAttendees::class)
             ->fillForm(['webinar_id' => $webinar->id])
-            ->assertSee('Last synced 26 - 10 - 2026 12:00 UTC · 2 of 2 Zoom sessions saved · 1 people')
+            ->assertSee('Took place on 23 - 07 - 2026 · Last synced 26 - 10 - 2026 12:00 UTC')
+            ->assertSee('of 2 reported by Zoom')
             ->assertActionVisible('sync');
     }
 

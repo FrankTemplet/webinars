@@ -11,6 +11,10 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\EmbeddedSchema;
+use Filament\Schemas\Components\EmbeddedTable;
+use Filament\Schemas\Components\EmptyState;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
@@ -19,6 +23,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Table;
+use Filament\Widgets\StatsOverviewWidget\Stat;
 
 /**
  * Asistentes de un webinar, leídos de la base y no de Zoom, así que siguen
@@ -37,13 +42,85 @@ class WebinarAttendees extends Page implements HasTable
 
     protected static ?int $navigationSort = 3;
 
-    protected string $view = 'filament.pages.webinar-attendees';
-
     public ?array $data = [];
 
     public function mount(): void
     {
         $this->form->fill();
+    }
+
+    public function content(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                EmbeddedSchema::make('form'),
+                EmptyState::make('Select a webinar')
+                    ->description('Choose a client and a webinar that already took place to see its attendees.')
+                    ->icon(Heroicon::OutlinedUserGroup)
+                    ->visible(fn () => ! $this->selectedWebinar()),
+                EmptyState::make('Not synced yet')
+                    ->description(fn () => auth()->user()->isAdmin()
+                        ? 'This webinar\'s attendees haven\'t been synced from Zoom yet.'
+                        : 'This webinar\'s attendees haven\'t been synced from Zoom yet. Ask an admin to sync them.')
+                    ->icon(Heroicon::OutlinedArrowPath)
+                    ->footer([$this->syncAction()])
+                    ->visible(fn () => filled($this->selectedWebinar()?->zoom_webinar_id) && ! $this->hasAttendees()),
+                EmptyState::make('No Zoom webinar linked')
+                    ->description('Link this webinar to its Zoom webinar in the webinar\'s settings to sync its attendees.')
+                    ->icon(Heroicon::OutlinedLinkSlash)
+                    ->visible(fn () => ($webinar = $this->selectedWebinar()) && blank($webinar->zoom_webinar_id) && ! $this->hasAttendees()),
+                Section::make(fn () => $this->selectedWebinar()?->title)
+                    ->description(fn () => $this->summary())
+                    ->afterHeader([$this->syncAction()])
+                    ->schema(fn () => $this->stats())
+                    ->columns(['default' => 2, 'lg' => 4])
+                    ->visible(fn () => $this->hasAttendees()),
+                EmbeddedTable::make()
+                    ->visible(fn () => $this->hasAttendees()),
+            ]);
+    }
+
+    /**
+     * Fecha del webinar y cuándo se trajeron sus asistentes, para saber si lo
+     * que se ve está al día.
+     */
+    private function summary(): string
+    {
+        $webinar = $this->selectedWebinar();
+
+        $synced = $webinar->attendees_synced_at
+            ? "Last synced {$webinar->attendees_synced_at->format('d - m - Y H:i')} UTC"
+            : 'Synced before sync tracking existed — sync again to confirm these are up to date';
+
+        return collect([$webinar->eventDateSummary(), $synced])->filter()->implode(' · ');
+    }
+
+    /**
+     * @return array<Stat>
+     */
+    private function stats(): array
+    {
+        $webinar = $this->selectedWebinar();
+        $sessions = $webinar->attendees()->count();
+        $people = $webinar->attendees()->distinct()->count('email');
+        $minutes = $people > 0 ? intdiv((int) $webinar->attendees()->sum('duration'), 60 * $people) : 0;
+
+        return [
+            Stat::make('People', number_format($people))
+                ->description('Unique emails')
+                ->icon(Heroicon::OutlinedUsers),
+            Stat::make('External people', number_format($webinar->uniqueExternalAttendees()))
+                ->description('Without internal domains')
+                ->icon(Heroicon::OutlinedUserGroup),
+            Stat::make('Zoom sessions', number_format($sessions))
+                ->description($webinar->zoom_participants_count !== null
+                    ? "of {$webinar->zoom_participants_count} reported by Zoom"
+                    : 'Reconnections count separately')
+                ->icon(Heroicon::OutlinedVideoCamera),
+            Stat::make('Avg. time per person', "{$minutes} min")
+                ->description('All sessions added up')
+                ->icon(Heroicon::OutlinedClock),
+        ];
     }
 
     public function form(Schema $schema): Schema
@@ -88,25 +165,6 @@ class WebinarAttendees extends Page implements HasTable
     public function hasAttendees(): bool
     {
         return (bool) $this->selectedWebinar()?->attendees()->exists();
-    }
-
-    /**
-     * Cuándo se trajeron por última vez y si coinciden con lo que Zoom reportó,
-     * para saber si lo que se ve está al día.
-     */
-    public function syncSummary(): ?string
-    {
-        $webinar = $this->selectedWebinar();
-
-        if (! $webinar?->attendees_synced_at) {
-            return 'Synced before sync tracking existed. Sync again to confirm these are up to date.';
-        }
-
-        $saved = $webinar->attendees()->count();
-        $people = $webinar->attendees()->distinct()->count('email');
-
-        return "Last synced {$webinar->attendees_synced_at->format('d - m - Y H:i')} UTC · "
-            ."{$saved} of {$webinar->zoom_participants_count} Zoom sessions saved · {$people} people";
     }
 
     public function table(Table $table): Table

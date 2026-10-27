@@ -84,7 +84,7 @@ class WebinarEventDateAndAttendeesTest extends TestCase
         $webinar = $this->webinar(['zoom_webinar_id' => '86198352801', 'event_date' => '2026-02-19']);
 
         Livewire::test(WebinarAttendees::class)
-            ->assertSee('Select a client and a webinar')
+            ->assertSee('Select a webinar')
             ->fillForm(['client_id' => $webinar->client_id, 'webinar_id' => $webinar->id])
             ->assertSee('been synced from Zoom yet')
             ->assertActionVisible('sync')
@@ -117,7 +117,7 @@ class WebinarEventDateAndAttendeesTest extends TestCase
 
         Livewire::test(WebinarAttendees::class)
             ->fillForm(['client_id' => $webinar->client_id, 'webinar_id' => $webinar->id])
-            ->assertSee('has no Zoom webinar linked')
+            ->assertSee('No Zoom webinar linked')
             ->assertActionHidden('sync');
     }
 
