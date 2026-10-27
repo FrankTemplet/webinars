@@ -12,7 +12,9 @@ class RegisterInZoomBulkAction
 {
     public static function make(): Action
     {
-        return Action::make('registerInZoom')
+        // Nombre propio: la tabla guarda sus acciones por nombre y la de cada
+        // fila se llama registerInZoom; con el mismo, este botón abría aquella.
+        return Action::make('registerPendingInZoom')
             ->label(function ($livewire) {
                 $pendingCount = static::pendingCount($livewire);
 
