@@ -38,6 +38,8 @@ return [
         'account_id' => env('ZOOM_ACCOUNT_ID'),
         'client_id' => env('ZOOM_CLIENT_ID'),
         'client_secret' => env('ZOOM_CLIENT_SECRET'),
+        // Los webinars de la cuenta son los reales: en local no se registra a nadie.
+        'fake_registrations' => env('ZOOM_FAKE_REGISTRATIONS', env('APP_ENV') === 'local'),
     ],
 
     'facebook' => [

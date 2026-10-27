@@ -4,7 +4,7 @@ namespace App\Filament\Resources\Submissions\Actions;
 
 use App\Models\Submission;
 use App\Models\Webinar;
-use App\Services\ZoomService;
+use App\Services\SubmissionZoomRegistrar;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 
@@ -28,7 +28,7 @@ class RegisterInZoomBulkAction
                 $webinar = static::filteredWebinar($livewire);
 
                 // Solo si hay webinar filtrado, con Zoom configurado y pendientes
-                if (!$webinar || empty($webinar->zoom_webinar_id)) {
+                if (!$webinar || !$webinar->zoomWebinarIds()) {
                     return false;
                 }
 
@@ -45,7 +45,7 @@ class RegisterInZoomBulkAction
             ->action(function ($livewire) {
                 $webinar = static::filteredWebinar($livewire);
 
-                if (!$webinar || empty($webinar->zoom_webinar_id)) {
+                if (!$webinar || !$webinar->zoomWebinarIds()) {
                     Notification::make()
                         ->title('Error')
                         ->body('Debes seleccionar un cliente y un webinar con Zoom configurado.')
@@ -70,18 +70,12 @@ class RegisterInZoomBulkAction
                     return;
                 }
 
-                $zoomService = app(ZoomService::class);
+                $registrar = app(SubmissionZoomRegistrar::class);
                 $successCount = 0;
                 $errorCount = 0;
 
                 foreach ($submissions as $submission) {
-                    $registered = $zoomService->registerRegistrant(
-                        $webinar->zoom_webinar_id,
-                        $submission->data ?? []
-                    );
-
-                    if ($registered) {
-                        $submission->update(['registered_in_zoom_at' => now()]);
+                    if ($registrar->register($submission)) {
                         $successCount++;
                     } else {
                         $errorCount++;

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Submissions\Schemas;
 
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -65,6 +66,14 @@ class SubmissionForm
                             return $component;
                         })->toArray();
                     }),
+                Section::make('Sesiones')
+                    ->schema([
+                        CheckboxList::make('sessions')
+                            ->hiddenLabel()
+                            ->options(fn ($record) => collect($record->webinar->sessions)->pluck('label', 'zoom_webinar_id'))
+                            ->disabled(),
+                    ])
+                    ->visible(fn ($record) => (bool) $record?->webinar?->hasSessions()),
                 Section::make('UTM Tracking')
                     ->schema([
                         TextInput::make('utm_source')->label('Source')->disabled(),

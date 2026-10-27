@@ -107,7 +107,8 @@ class StatsController extends ApiController
                     'campaign_salesforce_field' => $webinar->campaign,
                     'event_date' => $webinar->event_date?->toDateString(),
                     'meta_campaign_id' => $webinar->meta_campaign_id,
-                    'zoom_webinar_id' => $webinar->zoom_webinar_id,
+                    // Con sesiones, la primera, para quien lee un solo Zoom.
+                    'zoom_webinar_id' => $webinar->zoomWebinarIds()[0] ?? null,
                     'client' => [
                         'id' => $webinar->client?->id,
                         'name' => $webinar->client?->name,
@@ -115,6 +116,13 @@ class StatsController extends ApiController
                     ],
                 ],
                 'registrations' => $registrations,
+                'sessions' => collect($webinar->sessions ?? [])->map(fn (array $session) => [
+                    'zoom_webinar_id' => $session['zoom_webinar_id'],
+                    'label' => $session['label'],
+                    'date' => $session['date'] ?? null,
+                    'registrations' => (clone $submissions)->whereJsonContains('sessions', $session['zoom_webinar_id'])->count(),
+                    'unique_attendees' => (clone $attendees)->where('zoom_webinar_id', $session['zoom_webinar_id'])->distinct()->count(DB::raw('LOWER(email)')),
+                ])->values()->all(),
                 'unique_registrations' => $uniqueEmails,
                 'unique_registrations_external' => $uniqueExternal,
                 'unique_registrations_internal' => $uniqueEmails - $uniqueExternal,

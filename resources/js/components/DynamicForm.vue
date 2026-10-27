@@ -30,8 +30,16 @@ interface TrackingScript {
     enabled: boolean;
 }
 
+interface Session {
+    id: string;
+    label: string;
+}
+
 interface Props {
     schema: FormField[];
+    /** Sesiones del evento: cada una es un webinar de Zoom con su invitación. */
+    sessions?: Session[];
+    sessionsLabel?: string | null;
     submitUrl: string;
     trackingScripts?: TrackingScript[];
     /** En el preview del panel el formulario se ve pero no se envía. */
@@ -39,7 +47,7 @@ interface Props {
 }
 
 interface FormData {
-    [key: string]: string | boolean;
+    [key: string]: string | boolean | string[];
 }
 
 const props = defineProps<Props>();
@@ -54,6 +62,9 @@ props.schema.forEach(field => {
     }
 });
 
+if (props.sessions?.length) {
+    formData.sessions = [];
+}
 
 // Capture UTM parameters from URL
 const urlParams = new URLSearchParams(window.location.search);
@@ -290,6 +301,30 @@ const submit = (): void => {
 
             <div v-if="form.errors[field.name]" class="text-sm text-red-600 mt-1">
                 {{ form.errors[field.name] }}
+            </div>
+        </div>
+
+        <!-- Sesiones: una invitación de Zoom por cada una que elija -->
+        <div v-if="sessions?.length" class="mb-3 pt-2">
+            <label class="group-label block text-sm font-semibold mb-2">
+                {{ sessionsLabel || '¿A qué sesiones quieres asistir?' }} <span class="text-red-500">*</span>
+            </label>
+            <div class="flex flex-col gap-y-2">
+                <div v-for="session in sessions" :key="session.id" class="flex items-center">
+                    <input
+                        :id="`sessions_${session.id}`"
+                        type="checkbox"
+                        :value="session.id"
+                        v-model="form.sessions as string[]"
+                        class="form-check-input h-4 w-4 rounded cursor-pointer"
+                    />
+                    <label :for="`sessions_${session.id}`" class="ml-2 block text-sm cursor-pointer">
+                        {{ session.label }}
+                    </label>
+                </div>
+            </div>
+            <div v-if="form.errors.sessions" class="text-sm text-red-600 mt-1">
+                {{ form.errors.sessions }}
             </div>
         </div>
 

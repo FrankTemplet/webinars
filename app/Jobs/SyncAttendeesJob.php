@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Attendee;
 use App\Models\Webinar;
 use App\Services\ZoomService;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -15,7 +16,8 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Descarga de Zoom los participantes de los webinars y los guarda en attendees.
- * Sin webinarId sincroniza los que tengan zoom_webinar_id y fecha reciente.
+ * Sin webinarId sincroniza los que tengan Zoom (único o por sesiones) y fecha
+ * reciente. Cada fila guarda de qué webinar de Zoom vino.
  */
 class SyncAttendeesJob implements ShouldQueue
 {
@@ -28,8 +30,9 @@ class SyncAttendeesJob implements ShouldQueue
     public function handle(ZoomService $zoom): void
     {
         $webinars = Webinar::withoutGlobalScopes()
-            ->whereNotNull('zoom_webinar_id')
-            ->where('zoom_webinar_id', '!=', '')
+            ->where(fn ($q) => $q
+                ->where(fn ($q) => $q->whereNotNull('zoom_webinar_id')->where('zoom_webinar_id', '!=', ''))
+                ->orWhereNotNull('sessions'))
             ->when($this->webinarId, fn ($q) => $q->where('id', $this->webinarId))
             // En la corrida programada, solo los de los últimos 30 días: los
             // anteriores ya no cambian. Sin fecha se siguen sincronizando.
@@ -39,58 +42,115 @@ class SyncAttendeesJob implements ShouldQueue
             ->get();
 
         foreach ($webinars as $webinar) {
-            $participants = $zoom->getWebinarParticipantsDetailed($webinar->zoom_webinar_id);
+            $reports = [];
 
-            // Una respuesta incompleta no debe borrar lo que ya teníamos.
-            if ($participants === null) {
-                Log::warning("Skipped attendee sync for webinar {$webinar->id}: Zoom's report could not be read in full.");
+            foreach ($this->sessionsToSync($webinar) as $zoomWebinarId) {
+                $participants = $zoom->getWebinarParticipantsDetailed($zoomWebinarId);
 
+                // Una respuesta incompleta no debe borrar lo que ya teníamos.
+                if ($participants === null) {
+                    Log::warning("Skipped attendee sync for webinar {$webinar->id}, Zoom webinar {$zoomWebinarId}: Zoom's report could not be read in full.");
+
+                    continue;
+                }
+
+                $reports[$zoomWebinarId] = $participants;
+            }
+
+            if (! $reports) {
                 continue;
             }
 
-            DB::transaction(function () use ($webinar, $participants) {
-                $keys = [];
-
-                foreach ($participants as $participant) {
-                    $keys[] = $participantId = $this->participantKey($participant);
-
-                    Attendee::withoutGlobalScopes()->updateOrCreate(
-                        [
-                            'webinar_id' => $webinar->id,
-                            'zoom_participant_id' => $participantId,
-                        ],
-                        [
-                            'zoom_user_id' => $participant['user_id'] ?? null,
-                            'name' => $participant['name'] ?? null,
-                            'email' => $participant['user_email'] ?? null,
-                            'join_time' => $participant['join_time'] ?? null,
-                            'leave_time' => $participant['leave_time'] ?? null,
-                            'duration' => (int) ($participant['duration'] ?? 0),
-                            'device' => $participant['device'] ?? null,
-                            'ip_address' => $participant['ip_address'] ?? null,
-                            'location' => $participant['location'] ?? null,
-                            'raw' => $participant,
-                        ]
-                    );
-                }
-
-                // Lo guardado queda igual al reporte: se van las filas con llaves
-                // viejas o que Zoom ya no reporta. Un reporte vacío no borra nada.
-                if ($keys) {
-                    Attendee::withoutGlobalScopes()
-                        ->where('webinar_id', $webinar->id)
-                        ->whereNotIn('zoom_participant_id', $keys)
-                        ->delete();
+            DB::transaction(function () use ($webinar, $reports) {
+                foreach ($reports as $zoomWebinarId => $participants) {
+                    $this->storeSession($webinar, (string) $zoomWebinarId, $participants);
                 }
 
                 $webinar->update([
                     'attendees_synced_at' => now(),
-                    'zoom_participants_count' => count($participants),
+                    'zoom_participants_count' => $this->reportedCount($webinar, $reports),
                 ]);
             });
 
-            Log::info("Synced {$webinar->id}: ".count($participants).' attendees from Zoom.');
+            Log::info("Synced {$webinar->id}: ".collect($reports)->sum(fn ($participants) => count($participants)).' attendees from Zoom.');
         }
+    }
+
+    /**
+     * Las sesiones que todavía no ocurren no tienen reporte en Zoom.
+     *
+     * @return array<int, string>
+     */
+    private function sessionsToSync(Webinar $webinar): array
+    {
+        if (! $webinar->hasSessions()) {
+            return $webinar->zoomWebinarIds();
+        }
+
+        return collect($webinar->sessions)
+            ->filter(fn (array $session) => blank($session['date'] ?? null) || ! Carbon::parse($session['date'])->isFuture())
+            ->pluck('zoom_webinar_id')
+            ->map(fn ($id) => (string) $id)
+            ->values()
+            ->all();
+    }
+
+    private function storeSession(Webinar $webinar, string $zoomWebinarId, array $participants): void
+    {
+        $keys = [];
+
+        foreach ($participants as $participant) {
+            $keys[] = $participantId = $this->participantKey($participant);
+
+            Attendee::withoutGlobalScopes()->updateOrCreate(
+                [
+                    'webinar_id' => $webinar->id,
+                    'zoom_webinar_id' => $zoomWebinarId,
+                    'zoom_participant_id' => $participantId,
+                ],
+                [
+                    'zoom_user_id' => $participant['user_id'] ?? null,
+                    'name' => $participant['name'] ?? null,
+                    'email' => $participant['user_email'] ?? null,
+                    'join_time' => $participant['join_time'] ?? null,
+                    'leave_time' => $participant['leave_time'] ?? null,
+                    'duration' => (int) ($participant['duration'] ?? 0),
+                    'device' => $participant['device'] ?? null,
+                    'ip_address' => $participant['ip_address'] ?? null,
+                    'location' => $participant['location'] ?? null,
+                    'raw' => $participant,
+                ]
+            );
+        }
+
+        // Lo guardado queda igual al reporte: se van las filas con llaves viejas
+        // o que Zoom ya no reporta, solo de esta sesión si hay varias. Un
+        // reporte vacío no borra nada.
+        if ($keys) {
+            Attendee::withoutGlobalScopes()
+                ->where('webinar_id', $webinar->id)
+                ->when($webinar->hasSessions(), fn ($q) => $q->where('zoom_webinar_id', $zoomWebinarId))
+                ->where(fn ($q) => $q
+                    ->whereNotIn('zoom_participant_id', $keys)
+                    ->orWhere('zoom_webinar_id', '!=', $zoomWebinarId)
+                    ->orWhereNull('zoom_webinar_id'))
+                ->delete();
+        }
+    }
+
+    /**
+     * Total de sesiones de Zoom del webinar. Las que no se pudieron leer esta
+     * vez cuentan con lo que ya estaba guardado.
+     */
+    private function reportedCount(Webinar $webinar, array $reports): int
+    {
+        $notRead = array_diff($webinar->zoomWebinarIds(), array_map('strval', array_keys($reports)));
+
+        $stored = $notRead
+            ? Attendee::withoutGlobalScopes()->where('webinar_id', $webinar->id)->whereIn('zoom_webinar_id', $notRead)->count()
+            : 0;
+
+        return collect($reports)->sum(fn ($participants) => count($participants)) + $stored;
     }
 
     /**

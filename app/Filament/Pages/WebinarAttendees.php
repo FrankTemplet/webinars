@@ -64,17 +64,21 @@ class WebinarAttendees extends Page implements HasTable
                         : 'This webinar\'s attendees haven\'t been synced from Zoom yet. Ask an admin to sync them.')
                     ->icon(Heroicon::OutlinedArrowPath)
                     ->footer([$this->syncAction()])
-                    ->visible(fn () => filled($this->selectedWebinar()?->zoom_webinar_id) && ! $this->hasAttendees()),
+                    ->visible(fn () => $this->selectedWebinar()?->zoomWebinarIds() && ! $this->hasAttendees()),
                 EmptyState::make('No Zoom webinar linked')
                     ->description('Link this webinar to its Zoom webinar in the webinar\'s settings to sync its attendees.')
                     ->icon(Heroicon::OutlinedLinkSlash)
-                    ->visible(fn () => ($webinar = $this->selectedWebinar()) && blank($webinar->zoom_webinar_id) && ! $this->hasAttendees()),
+                    ->visible(fn () => ($webinar = $this->selectedWebinar()) && ! $webinar->zoomWebinarIds() && ! $this->hasAttendees()),
                 Section::make(fn () => $this->selectedWebinar()?->title)
                     ->description(fn () => $this->summary())
                     ->afterHeader([$this->syncAction()])
                     ->schema(fn () => $this->stats())
                     ->columns(['default' => 2, 'lg' => 4])
                     ->visible(fn () => $this->hasAttendees()),
+                Section::make('By session')
+                    ->schema(fn () => $this->sessionStats())
+                    ->columns(['default' => 2, 'lg' => 4])
+                    ->visible(fn () => $this->hasAttendees() && $this->selectedWebinar()->hasSessions()),
                 EmbeddedTable::make()
                     ->visible(fn () => $this->hasAttendees()),
             ]);
@@ -121,6 +125,26 @@ class WebinarAttendees extends Page implements HasTable
                 ->description('All sessions added up')
                 ->icon(Heroicon::OutlinedClock),
         ];
+    }
+
+    /**
+     * Personas y tiempo promedio de cada sesión, para webinars con varias.
+     *
+     * @return array<Stat>
+     */
+    private function sessionStats(): array
+    {
+        $webinar = $this->selectedWebinar();
+
+        return collect($webinar->sessions)->map(function (array $session) use ($webinar) {
+            $attendees = fn () => $webinar->attendees()->where('zoom_webinar_id', $session['zoom_webinar_id']);
+            $people = $attendees()->distinct()->count('email');
+            $minutes = $people > 0 ? intdiv((int) $attendees()->sum('duration'), 60 * $people) : 0;
+
+            return Stat::make($session['label'], number_format($people))
+                ->description($people > 0 ? "People · {$minutes} min avg." : 'No attendees synced')
+                ->icon(Heroicon::OutlinedCalendarDays);
+        })->all();
     }
 
     public function form(Schema $schema): Schema
@@ -177,6 +201,10 @@ class WebinarAttendees extends Page implements HasTable
                     ->searchable(),
                 TextColumn::make('email')
                     ->searchable(),
+                TextColumn::make('zoom_webinar_id')
+                    ->label('Session')
+                    ->formatStateUsing(fn (?string $state) => $state ? $this->selectedWebinar()->sessionLabel($state) : null)
+                    ->visible(fn () => (bool) $this->selectedWebinar()?->hasSessions()),
                 TextColumn::make('join_time')
                     ->label('Joined')
                     ->dateTime('d - m - Y H:i')
@@ -197,7 +225,7 @@ class WebinarAttendees extends Page implements HasTable
         return Action::make('sync')
             ->label('Sync from Zoom')
             ->icon('heroicon-o-arrow-path')
-            ->visible(fn () => auth()->user()->isAdmin() && filled($this->selectedWebinar()?->zoom_webinar_id))
+            ->visible(fn () => auth()->user()->isAdmin() && $this->selectedWebinar()?->zoomWebinarIds())
             ->action(function () {
                 $webinar = $this->selectedWebinar();
                 $previousSync = $webinar->attendees_synced_at;

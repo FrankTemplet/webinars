@@ -18,7 +18,7 @@ class Webinar extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'client_id', 'title', 'show_title', 'subtitle', 'description', 'slug', 'event_date', 'zoom_webinar_id', 'attendees_synced_at', 'zoom_participants_count', 'hero_image', 'header_logo',
+        'client_id', 'title', 'show_title', 'subtitle', 'description', 'slug', 'event_date', 'zoom_webinar_id', 'multiple_sessions', 'sessions', 'sessions_label', 'attendees_synced_at', 'zoom_participants_count', 'hero_image', 'header_logo',
         'form_schema', 'chartable_fields', 'tracking_scripts', 'meta_title', 'meta_description', 'clay_webhook_url',
         'accent_color', 'accent_text_color', 'background_color',
         'button_radius', 'field_radius', 'custom_css',
@@ -38,6 +38,8 @@ class Webinar extends Model
         'field_radius' => 'integer',
         'last_ad_spend_sync_at' => 'datetime',
         'event_date' => 'date',
+        'multiple_sessions' => 'boolean',
+        'sessions' => 'array',
         'attendees_synced_at' => 'datetime',
         'zoom_participants_count' => 'integer',
     ];
@@ -45,6 +47,62 @@ class Webinar extends Model
     protected static function booted(): void
     {
         static::addGlobalScope(new ClientAccessScope('client_id'));
+
+        // Con sesiones, mandan las sesiones: el webinar es su última fecha y
+        // el Zoom único deja de usarse.
+        static::saving(function (Webinar $webinar) {
+            if (! $webinar->multiple_sessions) {
+                $webinar->sessions = null;
+
+                return;
+            }
+
+            $webinar->sessions = collect($webinar->sessions)
+                ->map(fn (array $session) => ['zoom_webinar_id' => (string) $session['zoom_webinar_id']] + $session)
+                ->values()
+                ->all();
+            $webinar->zoom_webinar_id = null;
+            $webinar->event_date = collect($webinar->sessions)->pluck('date')->filter()->max() ?? $webinar->event_date;
+        });
+    }
+
+    public function hasSessions(): bool
+    {
+        return $this->multiple_sessions && ! empty($this->sessions);
+    }
+
+    /**
+     * Webinars de Zoom en los que se registra y de los que se traen
+     * asistentes: los de sus sesiones, o el único que tenga.
+     *
+     * @return array<int, string>
+     */
+    public function zoomWebinarIds(): array
+    {
+        if ($this->hasSessions()) {
+            return collect($this->sessions)->pluck('zoom_webinar_id')->filter()->map(fn ($id) => (string) $id)->values()->all();
+        }
+
+        return filled($this->zoom_webinar_id) ? [(string) $this->zoom_webinar_id] : [];
+    }
+
+    public function sessionLabel(string $zoomWebinarId): string
+    {
+        return collect($this->sessions ?? [])->firstWhere('zoom_webinar_id', $zoomWebinarId)['label'] ?? $zoomWebinarId;
+    }
+
+    /**
+     * Sesiones como las ve el formulario público: el label y el ID de Zoom
+     * con el que vuelven en el envío.
+     *
+     * @return array<int, array{id: string, label: string}>
+     */
+    public function publicSessions(): array
+    {
+        return collect($this->sessions ?? [])
+            ->map(fn (array $session) => ['id' => (string) $session['zoom_webinar_id'], 'label' => $session['label']])
+            ->values()
+            ->all();
     }
 
     public function client()
@@ -113,6 +171,8 @@ class Webinar extends Model
             ]),
             [
                 'tracking_scripts' => $this->publicTrackingScripts(),
+                'sessions' => $this->publicSessions(),
+                'sessions_label' => $this->sessions_label,
                 'theme' => $this->theme($forEditor),
             ],
         );

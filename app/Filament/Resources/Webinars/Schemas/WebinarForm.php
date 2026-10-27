@@ -45,61 +45,70 @@ class WebinarForm
                     ->maxLength(255),
                 DatePicker::make('event_date')
                     ->label('Webinar date')
-                    ->helperText('The day the webinar takes place. Filled in from Zoom when you pick its webinar.')
+                    ->helperText(fn (Get $get) => $get('multiple_sessions')
+                        ? 'Taken from the last session.'
+                        : 'The day the webinar takes place. Filled in from Zoom when you pick its webinar.')
+                    ->disabled(fn (Get $get) => (bool) $get('multiple_sessions'))
                     ->displayFormat('d - m - Y')
                     ->native(false),
-                Select::make('zoom_webinar_id')
+                self::zoomWebinarSelect('zoom_webinar_id', fn ($value, ?Webinar $record) => $record?->zoom_webinar_id === (string) $value)
                     ->label('Zoom Webinar')
                     ->helperText('Choose an upcoming Zoom webinar, or paste the Zoom ID of one that already took place.')
-                    ->options(fn () => app(ZoomService::class)->listWebinars())
-                    ->getSearchResultsUsing(function (string $search) {
-                        $zoom = app(ZoomService::class);
-                        $results = array_filter(
-                            $zoom->listWebinars(),
-                            fn (string $label, $id) => Str::contains("{$label} {$id}", $search, ignoreCase: true),
-                            ARRAY_FILTER_USE_BOTH,
-                        );
-
-                        // Los que ya pasaron no salen en la lista de Zoom; se encuentran por ID.
-                        $id = preg_replace('/\D/', '', $search);
-                        if (strlen($id) >= 9 && ! isset($results[$id]) && $label = $zoom->webinarLabel($id)) {
-                            $results[$id] = $label;
-                        }
-
-                        return $results;
-                    })
-                    // Un ID ya guardado sigue siendo válido aunque Zoom lo haya borrado;
-                    // uno nuevo solo si Zoom lo reconoce.
-                    ->getOptionLabelUsing(fn ($value, ?Webinar $record) => app(ZoomService::class)->webinarLabel((string) $value)
-                        ?? ($record?->zoom_webinar_id === (string) $value ? "{$value} (no encontrado en Zoom)" : null))
-                    ->searchable()
+                    ->hidden(fn (Get $get) => (bool) $get('multiple_sessions'))
                     ->nullable()
-                    ->live()
                     ->afterStateUpdated(function ($state, Get $get, Set $set) {
                         if ($state && ! $get('event_date') && $zoomWebinar = app(ZoomService::class)->findWebinar((string) $state)) {
                             $set('event_date', app(ZoomService::class)->startDate($zoomWebinar)->toDateString());
                         }
 
                         if ($state) {
-                            $schema = $get('form_schema') ?? [];
-                            $names = array_column($schema, 'name');
-
-                            $toAdd = [];
-                            if (!in_array('email', $names)) {
-                                $toAdd[] = ['type' => 'email', 'label' => 'Email', 'name' => 'email', 'required' => true];
-                            }
-                            if (!in_array('first_name', $names) && !in_array('nombre', $names)) {
-                                $toAdd[] = ['type' => 'text', 'label' => 'Nombre', 'name' => 'first_name', 'required' => true];
-                            }
-                            if (!in_array('last_name', $names) && !in_array('apellido', $names)) {
-                                $toAdd[] = ['type' => 'text', 'label' => 'Apellido', 'name' => 'last_name', 'required' => true];
-                            }
-
-                            if (!empty($toAdd)) {
-                                $set('form_schema', array_merge($schema, $toAdd));
-                            }
+                            self::addZoomRequiredFields($get, $set);
                         }
                     }),
+                Toggle::make('multiple_sessions')
+                    ->label('Multiple sessions')
+                    ->helperText('For events split across several Zoom webinars. Leads pick the sessions they want on the landing page and get the Zoom invitation of each one.')
+                    ->live()
+                    ->columnSpanFull(),
+                Section::make('Sessions')
+                    ->visible(fn (Get $get) => (bool) $get('multiple_sessions'))
+                    ->schema([
+                        TextInput::make('sessions_label')
+                            ->label('Question')
+                            ->default('¿A qué sesiones quieres asistir?')
+                            ->required()
+                            ->maxLength(255),
+                        Repeater::make('sessions')
+                            ->schema([
+                                self::zoomWebinarSelect('zoom_webinar_id', fn ($value, ?Webinar $record) => in_array((string) $value, $record?->zoomWebinarIds() ?? [], true))
+                                    ->label('Zoom Webinar')
+                                    ->required()
+                                    ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                                        if ($state && ! $get('date') && $zoomWebinar = app(ZoomService::class)->findWebinar((string) $state)) {
+                                            $set('date', app(ZoomService::class)->startDate($zoomWebinar)->toDateString());
+                                        }
+
+                                        if ($state) {
+                                            self::addZoomRequiredFields($get, $set, '../../');
+                                        }
+                                    }),
+                                TextInput::make('label')
+                                    ->helperText('Shown next to the checkbox on the landing page.')
+                                    ->required()
+                                    ->maxLength(255),
+                                DatePicker::make('date')
+                                    ->helperText('Filled in from Zoom.')
+                                    ->required()
+                                    ->displayFormat('d - m - Y')
+                                    ->native(false),
+                            ])
+                            ->columns(3)
+                            ->minItems(2)
+                            ->defaultItems(2)
+                            ->addActionLabel('Add session')
+                            ->live(),
+                    ])
+                    ->columnSpanFull(),
                 TextInput::make('clay_webhook_url')
                     ->label('Clay Webhook URL')
                     ->helperText('Enter your Clay webhook URL to automatically enrich lead data on each registration.')
@@ -341,5 +350,60 @@ class WebinarForm
                     ])->columnSpanFull(),
 
             ]);
+    }
+
+    /**
+     * Webinars de Zoom: los próximos de la cuenta, o uno que ya pasó buscado
+     * por su ID. $isSaved dice si un ID que Zoom ya no reconoce estaba
+     * guardado y sigue siendo válido.
+     */
+    private static function zoomWebinarSelect(string $name, \Closure $isSaved): Select
+    {
+        return Select::make($name)
+            ->options(fn () => app(ZoomService::class)->listWebinars())
+            ->getSearchResultsUsing(function (string $search) {
+                $zoom = app(ZoomService::class);
+                $results = array_filter(
+                    $zoom->listWebinars(),
+                    fn (string $label, $id) => Str::contains("{$label} {$id}", $search, ignoreCase: true),
+                    ARRAY_FILTER_USE_BOTH,
+                );
+
+                // Los que ya pasaron no salen en la lista de Zoom; se encuentran por ID.
+                $id = preg_replace('/\D/', '', $search);
+                if (strlen($id) >= 9 && ! isset($results[$id]) && $label = $zoom->webinarLabel($id)) {
+                    $results[$id] = $label;
+                }
+
+                return $results;
+            })
+            ->getOptionLabelUsing(fn ($value, ?Webinar $record) => app(ZoomService::class)->webinarLabel((string) $value)
+                ?? ($isSaved($value, $record) ? "{$value} (no encontrado en Zoom)" : null))
+            ->searchable()
+            ->live();
+    }
+
+    /**
+     * Zoom no registra a nadie sin correo, nombre y apellido.
+     */
+    private static function addZoomRequiredFields(Get $get, Set $set, string $path = ''): void
+    {
+        $schema = $get("{$path}form_schema") ?? [];
+        $names = array_column($schema, 'name');
+
+        $toAdd = [];
+        if (!in_array('email', $names)) {
+            $toAdd[] = ['type' => 'email', 'label' => 'Email', 'name' => 'email', 'required' => true];
+        }
+        if (!in_array('first_name', $names) && !in_array('nombre', $names)) {
+            $toAdd[] = ['type' => 'text', 'label' => 'Nombre', 'name' => 'first_name', 'required' => true];
+        }
+        if (!in_array('last_name', $names) && !in_array('apellido', $names)) {
+            $toAdd[] = ['type' => 'text', 'label' => 'Apellido', 'name' => 'last_name', 'required' => true];
+        }
+
+        if (!empty($toAdd)) {
+            $set("{$path}form_schema", array_merge($schema, $toAdd));
+        }
     }
 }

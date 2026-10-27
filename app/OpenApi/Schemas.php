@@ -90,6 +90,7 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'webinar', ref: '#/components/schemas/WebinarRef'),
         new OA\Property(property: 'registrations', type: 'integer', description: 'Total de submissions', example: 320),
+        new OA\Property(property: 'sessions', type: 'array', items: new OA\Items(ref: '#/components/schemas/WebinarSessionStats'), description: 'Una por webinar de Zoom cuando el evento tiene varias sesiones; vacío si tiene un solo Zoom.'),
         new OA\Property(property: 'unique_registrations', type: 'integer', description: 'Correos distintos, internos incluidos', example: 759),
         new OA\Property(property: 'unique_registrations_external', type: 'integer', description: 'Correos distintos excluyendo dominios internos. Es el denominador de show_up_rate y cost_per_lead.', example: 707),
         new OA\Property(property: 'unique_registrations_internal', type: 'integer', description: 'Correos distintos de nuestra gente y la del cliente', example: 52),
@@ -107,6 +108,19 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'cost_per_lead', type: 'number', format: 'float', description: 'ad_spend / unique_registrations_external', example: 3.91),
         new OA\Property(property: 'last_ad_spend_sync_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'internal_domains', type: 'array', items: new OA\Items(type: 'string'), description: 'Patrones tratados como internos para este webinar', example: ['templet', 'cwc', 'libertynet.com']),
+    ],
+    type: 'object',
+)]
+#[OA\Schema(
+    schema: 'WebinarSessionStats',
+    title: 'WebinarSessionStats',
+    description: 'Registros y asistentes de una sesión de un webinar con varias.',
+    properties: [
+        new OA\Property(property: 'zoom_webinar_id', type: 'string', example: '86036019470'),
+        new OA\Property(property: 'label', type: 'string', example: 'Sesión 01 | 25 de noviembre | Kiro y Spec-Driven'),
+        new OA\Property(property: 'date', type: 'string', format: 'date', nullable: true, example: '2026-11-25'),
+        new OA\Property(property: 'registrations', type: 'integer', description: 'Submissions que eligieron esta sesión', example: 210),
+        new OA\Property(property: 'unique_attendees', type: 'integer', description: 'Correos distintos que se conectaron a esta sesión', example: 95),
     ],
     type: 'object',
 )]

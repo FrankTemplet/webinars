@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Client;
 use App\Models\Webinar;
 use App\Models\Submission;
+use App\Services\SubmissionZoomRegistrar;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class WebinarController extends Controller
@@ -128,11 +130,16 @@ class WebinarController extends Controller
             }
         }
 
-        $data = $request->validate($rules);
+        if ($webinar->hasSessions()) {
+            $rules['sessions'] = ['required', 'array', 'min:1'];
+            $rules['sessions.*'] = [Rule::in($webinar->zoomWebinarIds())];
+        }
+
+        $request->validate($rules, ['sessions.required' => 'Elige al menos una sesión.']);
 
         $utmData = $request->only(['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']);
 
-        $submissionData = $request->except(['_token', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']);
+        $submissionData = $request->except(['_token', 'sessions', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']);
 
         // Clean phone number if present
         foreach ($submissionData as $key => $value) {
@@ -144,19 +151,12 @@ class WebinarController extends Controller
         $submission = Submission::create(array_merge([
             'webinar_id' => $webinar->id,
             'data' => $submissionData,
+            'sessions' => $webinar->hasSessions() ? array_values($request->input('sessions')) : null,
         ], $utmData));
 
-        // Register in Zoom if applicable
-        if ($webinar->zoom_webinar_id) {
-            $registered = app(\App\Services\ZoomService::class)->registerRegistrant(
-                $webinar->zoom_webinar_id,
-                $submissionData
-            );
-
-            // Marcar como registrado en Zoom si fue exitoso
-            if ($registered) {
-                $submission->update(['registered_in_zoom_at' => now()]);
-            }
+        // Zoom manda a cada sesión su propia invitación
+        if ($webinar->zoomWebinarIds()) {
+            app(SubmissionZoomRegistrar::class)->register($submission);
         }
 
         // Send Meta Conversions API event if configured

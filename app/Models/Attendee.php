@@ -10,6 +10,7 @@ class Attendee extends Model
 {
     protected $fillable = [
         'webinar_id',
+        'zoom_webinar_id',
         'zoom_participant_id',
         'zoom_user_id',
         'name',

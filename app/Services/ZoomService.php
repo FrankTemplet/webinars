@@ -159,6 +159,12 @@ class ZoomService
             return false;
         }
 
+        if (config('services.zoom.fake_registrations')) {
+            Log::info('Zoom Registration Faked', ['webinar_id' => $webinarId, 'email' => $payload['email']]);
+
+            return true;
+        }
+
         $response = Http::withToken($token)
             ->post("{$this->baseUrl}/webinars/{$webinarId}/registrants", $payload);
 

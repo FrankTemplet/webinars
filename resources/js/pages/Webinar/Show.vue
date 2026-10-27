@@ -54,6 +54,8 @@ interface Webinar {
     header_logo?: string;
     hero_image?: string;
     form_schema?: FormField[];
+    sessions?: { id: string; label: string }[];
+    sessions_label?: string | null;
     tracking_scripts?: TrackingScript[];
     theme: Theme;
 }
@@ -81,6 +83,7 @@ const view = computed(() => ({
     description: pick('description', props.webinar.description),
     show_title: pick<unknown>('show_title', props.webinar.show_title) !== false,
     form_schema: toList<FormField>(pick('form_schema', props.webinar.form_schema)),
+    sessions_label: pick('sessions_label', props.webinar.sessions_label),
 }));
 
 const socialLinks = computed(() => {
@@ -224,6 +227,8 @@ onMounted(() => {
                                 <DynamicForm
                                     v-if="view.form_schema && view.form_schema.length"
                                     :schema="view.form_schema"
+                                    :sessions="webinar.sessions"
+                                    :sessions-label="view.sessions_label"
                                     :submit-url="submitUrl"
                                     :tracking-scripts="enabledTrackingScripts"
                                     :preview="preview"
