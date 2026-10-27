@@ -24,6 +24,7 @@ class WebinarsTable
             // `client` se precarga porque las acciones de preview y live
             // arman la URL pública con el slug del cliente.
             ->modifyQueryUsing(fn ($query) => $query->with('client'))
+            ->defaultSort('created_at', 'desc')
             ->columns([
                 TextColumn::make('client.name')
                     ->label('Client')
