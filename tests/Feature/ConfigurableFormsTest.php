@@ -200,4 +200,55 @@ class ConfigurableFormsTest extends TestCase
         $this->assertSame(['Cloud', 'Security'], $data['labels']);
         $this->assertSame([2, 1], $data['datasets'][0]['data']);
     }
+
+    public function test_saved_questions_can_be_reordered_without_changing_their_keys(): void
+    {
+        $survey = $this->survey(['question_schema' => [
+            ['name' => 'first', 'label' => 'First', 'type' => 'text'],
+            ['name' => 'second', 'label' => 'Second', 'type' => 'radio', 'options' => ['A', 'B']],
+            ['name' => 'third', 'label' => 'Third', 'type' => 'rating'],
+        ]]);
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        $page = Livewire::test(EditSurvey::class, ['record' => $survey->id]);
+        $keys = array_keys($page->get('data.question_schema'));
+        $page->callFormComponentAction('question_schema', 'reorder', arguments: ['items' => array_reverse($keys)])
+            ->call('save')->assertHasNoFormErrors();
+        $this->assertSame(['third', 'second', 'first'], array_column($survey->fresh()->question_schema, 'name'));
+        $this->assertSame(['A', 'B'], $survey->fresh()->question_schema[1]['options']);
+    }
+
+    public function test_mobile_header_repair_only_moves_the_identified_artwork(): void
+    {
+        $survey = $this->survey([
+            'slug' => 'ataque-ia-de-la-exposicion-a-la-prevencion',
+            'hero_image' => 'surveys/heroes/desktop.png',
+            'header_logo' => 'surveys/logos/01M763K8XNN7VXRWX2TN54801N.png',
+        ]);
+        $survey->client->update(['slug' => 'libertynet']);
+        $migration = require database_path('migrations/2026_11_11_130000_correct_ataque_ia_survey_mobile_header.php');
+        $migration->up();
+        $survey->refresh();
+        $this->assertNull($survey->header_logo);
+        $this->assertSame('surveys/logos/01M763K8XNN7VXRWX2TN54801N.png', $survey->mobile_hero_image);
+        $this->assertSame('surveys/heroes/desktop.png', $survey->hero_image);
+        $migration->up();
+        $this->assertNull($survey->fresh()->header_logo);
+        $migration->down();
+        $this->assertNull($survey->fresh()->mobile_hero_image);
+        $survey->update(['mobile_hero_image' => 'surveys/heroes/new-mobile.png']);
+        $migration->up();
+        $this->assertSame('surveys/heroes/new-mobile.png', $survey->fresh()->mobile_hero_image);
+        $this->assertNotNull($survey->fresh()->header_logo);
+    }
+
+    public function test_contact_fields_can_be_reordered_and_saved(): void
+    {
+        $survey = $this->survey();
+        $this->actingAs(User::factory()->create(['role' => 'admin']));
+        $page = Livewire::test(EditSurvey::class, ['record' => $survey->id]);
+        $keys = array_keys($page->get('data.contact_schema'));
+        $page->callFormComponentAction('contact_schema', 'reorder', arguments: ['items' => array_reverse($keys)])
+            ->call('save')->assertHasNoFormErrors();
+        $this->assertSame(['company', 'email'], array_column($survey->fresh()->contact_schema, 'name'));
+    }
 }

@@ -73,11 +73,12 @@ class SurveyForm
                     ->directory('surveys/heroes')
                     ->columnSpanFull(),
                 FileUpload::make('mobile_hero_image')
-                    ->label('Mobile Image')
-                    ->helperText('Optional. Uses the main image when empty.')
+                    ->label('Mobile Header Image')
+                    ->helperText('Full header artwork for phones. Optional; uses Header Image when empty.')
                     ->image()->disk('public')->directory('surveys/heroes')->columnSpanFull(),
                 FileUpload::make('header_logo')
-                    ->label('Header Logo')
+                    ->label('Header Logo (overlay)')
+                    ->helperText('Optional small logo shown over the header on desktop and mobile. For mobile artwork, use Mobile Header Image.')
                     ->image()
                     ->disk('public')
                     ->directory('surveys/logos')
@@ -88,12 +89,7 @@ class SurveyForm
                 Section::make('Questions')
                     ->schema([
                         \App\Filament\Schemas\SurveyFieldSchema::make('question_schema')
-                            ->default(fn () => \App\Support\SurveyFields::legacyQuestions(new Survey(['guests_count' => 3])))
-                            ->afterStateHydrated(function ($component, $state, ?Survey $record) {
-                                if ($state === null && $record) {
-                                    $component->state($record->questionFields());
-                                }
-                            }),
+                            ->default(fn () => \App\Support\SurveyFields::legacyQuestions(new Survey(['guests_count' => 3]))),
                     ])->columnSpanFull(),
 
                 Section::make('Contact Block & Button')
@@ -116,12 +112,7 @@ class SurveyForm
                             ->visible(fn (Get $get) => (bool) $get('contact_enabled'))
                             ->columnSpanFull(),
                         \App\Filament\Schemas\SurveyFieldSchema::make('contact_schema', contact: true)
-                            ->default(\App\Support\SurveyFields::defaultContact())
-                            ->afterStateHydrated(function ($component, $state, ?Survey $record) {
-                                if ($state === null && $record) {
-                                    $component->state($record->contactFields());
-                                }
-                            }),
+                            ->default(\App\Support\SurveyFields::defaultContact()),
                         TextInput::make('submit_label')
                             ->label('Submit button')
                             ->placeholder(Survey::DEFAULT_COPY['submit_label'])

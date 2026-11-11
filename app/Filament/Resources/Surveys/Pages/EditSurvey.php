@@ -14,6 +14,14 @@ class EditSurvey extends EditRecord
 {
     protected static string $resource = SurveyResource::class;
 
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $data['question_schema'] ??= $this->getRecord()->questionFields();
+        $data['contact_schema'] ??= $this->getRecord()->contactFields();
+
+        return $data;
+    }
+
     protected function getHeaderActions(): array
     {
         return [
