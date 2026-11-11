@@ -252,13 +252,11 @@ onMounted(() => {
     <div class="webinar-page" :style="themeVars">
         <main class="header min-h-screen">
             <div class="container-fluid mx-auto px-0">
-                <div class="flex h-full flex-wrap">
+                <div class="webinar-layout">
                     <!-- Left Column: Form & Content -->
-                    <div
-                        class="form-column relative z-10 order-2 h-full w-full px-6 py-12 md:order-1 md:w-5/12 md:px-12 md:py-0"
-                    >
+                    <div class="form-column relative z-10">
                         <div
-                            class="wrapper mx-auto flex max-w-xl flex-col justify-center px-2 md:mr-0 md:ml-auto md:min-h-screen md:px-8"
+                            class="form-wrapper mx-auto flex flex-col justify-center"
                         >
                             <header class="mt-3 mb-4">
                                 <div class="logo mb-3 pb-4 xl:mb-6">
@@ -353,11 +351,16 @@ onMounted(() => {
 
                     <!-- Right Column: Hero Image -->
                     <div
-                        class="relative order-1 w-full p-0 md:order-2 md:w-7/12"
+                        class="hero-column"
+                        :style="{
+                            '--hero-image': view.hero
+                                ? `url(${view.hero})`
+                                : undefined,
+                        }"
                     >
                         <picture
                             v-if="view.hero || view.mobile"
-                            class="block w-full"
+                            class="hero-picture block w-full"
                         >
                             <source
                                 v-if="view.mobile"
@@ -372,7 +375,7 @@ onMounted(() => {
                         </picture>
                         <div
                             v-else
-                            class="min-h-[50vh] w-full bg-gray-200 md:min-h-screen"
+                            class="hero-placeholder min-h-[50svh] w-full bg-gray-200"
                         ></div>
                     </div>
                 </div>
@@ -389,6 +392,8 @@ onMounted(() => {
 .webinar-page {
     font-family: var(--font);
     color: var(--text);
+    background-color: var(--bg);
+    min-height: 100svh;
 }
 
 .webinar-page,
@@ -401,8 +406,64 @@ onMounted(() => {
     font-family: var(--font);
 }
 
+.webinar-layout {
+    display: grid;
+    grid-template-areas: 'hero' 'form';
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+}
 .form-column {
+    grid-area: form;
+    min-width: 0;
+    padding: 2rem 1.5rem;
     background-color: var(--bg);
+}
+.form-wrapper {
+    width: 100%;
+    max-width: 40rem;
+}
+.hero-column {
+    grid-area: hero;
+    position: relative;
+    min-width: 0;
+    /* clip y no hidden: hidden rompe el sticky de la imagen. */
+    overflow: clip;
+    background-color: var(--bg);
+}
+@media (min-width: 1024px) {
+    .webinar-layout {
+        grid-template-areas: 'form hero';
+        grid-template-columns: minmax(380px, 5fr) minmax(0, 7fr);
+    }
+    .form-column {
+        padding: 1.5rem clamp(1.5rem, 3vw, 3rem);
+    }
+    .form-wrapper {
+        max-width: 35rem;
+        min-height: calc(100svh - 3rem);
+    }
+    /* La imagen se muestra completa; el espacio que sobra cuando el
+       formulario es más alto se rellena con la misma imagen difuminada. */
+    .hero-column::before {
+        content: '';
+        position: absolute;
+        inset: -3rem;
+        background: var(--hero-image, none) center / cover no-repeat;
+        filter: blur(40px);
+    }
+    .hero-picture {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+    .webinar-hero {
+        max-height: 100svh;
+        object-fit: contain;
+        object-position: center top;
+    }
+    .hero-placeholder {
+        min-height: 100svh;
+    }
 }
 
 .webinar-title {
