@@ -18,7 +18,7 @@ class Webinar extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'client_id', 'title', 'show_title', 'subtitle', 'description', 'slug', 'event_date', 'zoom_webinar_id', 'multiple_sessions', 'sessions', 'sessions_label', 'attendees_synced_at', 'zoom_participants_count', 'hero_image', 'header_logo',
+        'client_id', 'title', 'show_title', 'subtitle', 'description', 'slug', 'event_date', 'zoom_webinar_id', 'multiple_sessions', 'sessions', 'sessions_label', 'attendees_synced_at', 'zoom_participants_count', 'hero_image', 'mobile_hero_image', 'submit_label', 'header_logo',
         'form_schema', 'chartable_fields', 'tracking_scripts', 'meta_title', 'meta_description', 'clay_webhook_url',
         'accent_color', 'accent_text_color', 'background_color',
         'button_radius', 'field_radius', 'custom_css',
@@ -166,7 +166,7 @@ class Webinar extends Model
         return array_merge(
             $this->only([
                 'slug', 'title', 'show_title', 'subtitle', 'description',
-                'meta_title', 'meta_description', 'hero_image', 'header_logo',
+                'meta_title', 'meta_description', 'hero_image', 'mobile_hero_image', 'submit_label', 'header_logo',
                 'form_schema',
             ]),
             [

@@ -1,7 +1,17 @@
 <script setup lang="ts">
+import SurveyFieldInput from '@/components/SurveyField.vue';
+import {
+    toList,
+    useLivePreview,
+    type Theme,
+} from '@/composables/useLivePreview';
+import {
+    initialAnswer,
+    type SurveyAnswer,
+    type SurveyField,
+} from '@/types/survey';
 import { Head, useForm } from '@inertiajs/vue3';
-import { useLivePreview, type Theme } from '@/composables/useLivePreview';
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 
 interface SocialMediaLink {
     type: string;
@@ -12,17 +22,9 @@ interface Client {
     slug: string;
     name: string;
     logo?: string;
+    favicon?: string;
     footer?: string | null;
     social_media?: SocialMediaLink[];
-}
-
-interface ExtraQuestion {
-    number: number;
-    type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'rating';
-    name: string;
-    label: string;
-    required: boolean;
-    options: string[];
 }
 
 interface SurveyCopy {
@@ -37,6 +39,9 @@ interface Survey {
     slug: string;
     intro?: string;
     hero_image?: string;
+    mobile_hero_image?: string;
+    question_schema: SurveyField[];
+    contact_schema: SurveyField[];
     header_logo?: string;
     theme: Theme;
     meta_title?: string;
@@ -50,7 +55,6 @@ interface Survey {
     copy: SurveyCopy;
     questions: { q1: string; q2: string; q3: string; q4: string; q5: string };
     stage_options: string[];
-    extra_questions: ExtraQuestion[];
 }
 
 interface Props {
@@ -63,57 +67,85 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const { pick, vars: brandVars, fontUrl } = useLivePreview(
-    () => props.survey.theme,
-    props.preview === true,
-);
+const {
+    draft,
+    imageUrl,
+    pick,
+    vars: brandVars,
+    fontUrl,
+} = useLivePreview(() => props.survey.theme, props.preview === true);
 
 const view = computed(() => ({
     intro: pick('intro', props.survey.intro),
+    contact_enabled:
+        draft.value?.contact_enabled ?? props.survey.contact_enabled,
+    contact_title: pick('contact_title', props.survey.copy.contact_title),
+    contact_description: pick(
+        'contact_description',
+        props.survey.copy.contact_description,
+    ),
+    submit_label: pick('submit_label', props.survey.copy.submit_label),
+    favicon:
+        imageUrl('favicon', props.client.favicon) ||
+        imageUrl('logo', props.client.logo),
+    hero: imageUrl('hero_image', props.survey.hero_image),
+    mobile: imageUrl('mobile_hero_image', props.survey.mobile_hero_image),
+    logo: imageUrl('header_logo', props.survey.header_logo),
 }));
-
-const guestRows = computed(() => Array.from({ length: props.survey.guests_count }, (_, i) => i));
-
-// Las preguntas extra viven bajo `extra` para no chocar con los campos fijos.
-const extraDefaults: Record<string, string | number | boolean> = {};
-props.survey.extra_questions.forEach((question) => {
-    extraDefaults[question.name] = question.type === 'checkbox' ? false : question.type === 'rating' ? 5 : '';
-});
-
+const questions = computed(() =>
+    draft.value && 'question_schema' in draft.value
+        ? toList<SurveyField>(draft.value.question_schema)
+        : props.survey.question_schema,
+);
+const contactFields = computed(() =>
+    (draft.value && 'contact_schema' in draft.value
+        ? toList<SurveyField>(draft.value.contact_schema)
+        : props.survey.contact_schema
+    ).filter((field) => !field.hidden),
+);
+const defaults = (fields: SurveyField[]) =>
+    Object.fromEntries(
+        fields.map((field) => [field.name, initialAnswer(field)]),
+    );
 const form = useForm({
-    name: '',
-    email: '',
-    phone: '',
-    extra: extraDefaults,
-    experience_rating: 5 as number,
-    use_case: '',
-    stage: props.survey.stage_options[0] ?? '',
-    wants_review: true,
-    guests: Array.from({ length: props.survey.guests_count }, () => ({ name: '', email: '', topics: '' })),
+    answers: defaults(props.survey.question_schema) as Record<
+        string,
+        SurveyAnswer
+    >,
+    contact: defaults(props.survey.contact_schema) as Record<
+        string,
+        SurveyAnswer
+    >,
     utm_source: '',
     utm_medium: '',
     utm_campaign: '',
     utm_term: '',
     utm_content: '',
 });
-
+watch([questions, contactFields], () => {
+    if (!props.preview) return;
+    form.answers = defaults(questions.value);
+    form.contact = defaults(contactFields.value);
+});
+const errors = computed(
+    () => form.errors as Record<string, string | undefined>,
+);
 // Arrastra los UTM de la URL para atribuir la respuesta igual que un registro.
 const urlParams = new URLSearchParams(window.location.search);
-(['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'] as const).forEach((param) => {
+(
+    [
+        'utm_source',
+        'utm_medium',
+        'utm_campaign',
+        'utm_term',
+        'utm_content',
+    ] as const
+).forEach((param) => {
     const value = urlParams.get(param);
     if (value) form[param] = value;
 });
 
-// Los errores de campos anidados (guests.0.email) y los de la encuesta en sí
-// no están en el tipo del form, así que se leen por llave.
-const errorFor = (key: string): string | undefined =>
-    (form.errors as Record<string, string | undefined>)[key];
-
-// Las cinco de la plantilla siempre están; solo la de invitados puede
-// ocultarse, así que la numeración se toma del servidor para las extra.
-const guestQuestionNumber = 5;
-
-const socialLinks = computed(() => props.client.social_media || (props.client as any).socialMedia || []);
+const socialLinks = computed(() => props.client.social_media ?? []);
 
 const getSocialIcon = (type: string) => {
     const icons: Record<string, string> = {
@@ -141,7 +173,7 @@ const submit = (): void => {
 <template>
     <Head :title="survey.meta_title || client.name">
         <meta name="description" :content="survey.meta_description || ''" />
-        <link v-if="client.logo" rel="icon" type="image/x-icon" :href="`/storage/${client.logo}`" />
+        <link v-if="view.favicon" rel="icon" :href="view.favicon" />
         <link rel="preconnect" href="https://fonts.bunny.net" />
         <link v-if="fontUrl" rel="stylesheet" :href="fontUrl" />
     </Head>
@@ -151,17 +183,31 @@ const submit = (): void => {
         <header>
             <div
                 class="cover header-cover"
-                :class="survey.hero_image ? '' : 'header-cover--empty'"
-                :style="survey.hero_image ? `background-image: url('/storage/${survey.hero_image}');` : ''"
+                :class="view.hero || view.mobile ? '' : 'header-cover--empty'"
+                :style="{
+                    '--hero-image': view.hero ? `url(${view.hero})` : 'none',
+                    '--mobile-hero-image': view.mobile
+                        ? `url(${view.mobile})`
+                        : undefined,
+                }"
             >
-                <img v-if="survey.header_logo" :src="`/storage/${survey.header_logo}`" alt="Logo" class="header-logo" />
+                <img
+                    v-if="view.logo"
+                    :src="view.logo"
+                    alt="Logo"
+                    class="header-logo"
+                />
             </div>
         </header>
 
         <!-- Intro -->
         <main class="py-6">
             <div class="survey-container">
-                <div v-if="view.intro" class="survey-intro" v-html="view.intro"></div>
+                <div
+                    v-if="view.intro"
+                    class="survey-intro"
+                    v-html="view.intro"
+                ></div>
             </div>
         </main>
 
@@ -172,294 +218,103 @@ const submit = (): void => {
         <!-- Encuesta cerrada -->
         <section v-if="!survey.is_open" class="survey-container state-block">
             <p class="lead">
-                {{ survey.closed_message || 'Esta encuesta ya no acepta respuestas. ¡Gracias por tu interés!' }}
+                {{
+                    survey.closed_message ||
+                    'Esta encuesta ya no acepta respuestas. ¡Gracias por tu interés!'
+                }}
             </p>
         </section>
 
         <!-- Agradecimiento -->
-        <section v-else-if="form.recentlySuccessful" class="survey-container state-block">
-            <h2 class="title mb-3">{{ survey.thank_you_title || '¡Gracias por tu respuesta!' }}</h2>
+        <section
+            v-else-if="form.recentlySuccessful"
+            class="survey-container state-block"
+        >
+            <h2 class="title mb-3">
+                {{ survey.thank_you_title || '¡Gracias por tu respuesta!' }}
+            </h2>
             <div
                 class="lead"
-                v-html="survey.thank_you_message || 'Tu retroalimentación nos ayuda a mejorar las próximas sesiones.'"
+                v-html="
+                    survey.thank_you_message ||
+                    'Tu retroalimentación nos ayuda a mejorar las próximas sesiones.'
+                "
             ></div>
         </section>
 
         <form v-else @submit.prevent="submit" novalidate>
-            <!-- Datos de contacto -->
-            <section v-if="survey.contact_enabled" class="pt-5 mb-4">
+            <section v-if="view.contact_enabled" class="mb-4 pt-5">
                 <div class="survey-container">
                     <div class="box-card">
-                        <p class="title-box mb-1">{{ survey.copy.contact_title }}</p>
-                        <p class="lead mb-3">{{ survey.copy.contact_description }}</p>
-                        <div class="field-row">
-                            <div class="field">
-                                <input
-                                    v-model="form.name"
-                                    type="text"
-                                    class="form-control"
-                                    placeholder="Nombre completo"
-                                    autocomplete="name"
-                                />
-                                <p v-if="form.errors.name" class="field-error">{{ form.errors.name }}</p>
-                            </div>
-                            <div class="field">
-                                <input
-                                    v-model="form.email"
-                                    type="email"
-                                    class="form-control"
-                                    placeholder="Correo electrónico"
-                                    autocomplete="email"
-                                />
-                                <p v-if="form.errors.email" class="field-error">{{ form.errors.email }}</p>
-                            </div>
-                            <div class="field">
-                                <input
-                                    v-model="form.phone"
-                                    type="tel"
-                                    class="form-control"
-                                    placeholder="Celular"
-                                    autocomplete="tel"
-                                />
-                                <p v-if="form.errors.phone" class="field-error">{{ form.errors.phone }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 1. Experiencia -->
-            <section class="pt-5 mb-4" :class="{ 'pt-5': !survey.contact_enabled }">
-                <div class="survey-container">
-                    <div class="box-card">
-                        <ol start="1">
-                            <li class="title-box">{{ survey.questions.q1 }}</li>
-                        </ol>
-                        <div v-for="star in [5, 4, 3, 2, 1]" :key="star" class="form-check">
-                            <input
-                                :id="`experiencia${star}`"
-                                v-model="form.experience_rating"
-                                class="form-check-input"
-                                type="radio"
-                                name="experienciaSesion"
-                                :value="star"
-                            />
-                            <label class="form-check-label stars" :for="`experiencia${star}`">
-                                <svg v-for="i in star" :key="i" class="star" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path
-                                        d="M12 3.2l2.6 5.3 5.8.85-4.2 4.1 1 5.75L12 16.5l-5.2 2.7 1-5.75-4.2-4.1 5.8-.85L12 3.2z"
-                                    />
-                                </svg>
-                                <span class="visually-hidden">{{ star }} de 5</span>
-                            </label>
-                        </div>
-                        <p v-if="form.errors.experience_rating" class="field-error">
-                            {{ form.errors.experience_rating }}
+                        <p class="title-box mb-1">{{ view.contact_title }}</p>
+                        <p class="lead contact-description">
+                            {{ view.contact_description }}
                         </p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 2. Caso de uso -->
-            <section class="mb-4">
-                <div class="survey-container">
-                    <div class="box-card">
-                        <ol start="2">
-                            <li class="title-box">{{ survey.questions.q2 }}</li>
-                        </ol>
-                        <textarea v-model="form.use_case" class="form-control" rows="3"></textarea>
-                        <p v-if="form.errors.use_case" class="field-error">{{ form.errors.use_case }}</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 3. Etapa -->
-            <section class="mb-4">
-                <div class="survey-container">
-                    <div class="box-card">
-                        <ol start="3">
-                            <li class="title-box">{{ survey.questions.q3 }}</li>
-                        </ol>
-                        <div v-for="option in survey.stage_options" :key="option" class="form-check">
-                            <input
-                                :id="`etapa_${option}`"
-                                v-model="form.stage"
-                                class="form-check-input"
-                                type="radio"
-                                name="etapaRadio"
-                                :value="option"
-                            />
-                            <label class="form-check-label" :for="`etapa_${option}`">{{ option }}</label>
-                        </div>
-                        <p v-if="form.errors.stage" class="field-error">{{ form.errors.stage }}</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 4. Revisión personalizada -->
-            <section class="mb-4">
-                <div class="survey-container">
-                    <div class="box-card">
-                        <ol start="4">
-                            <li class="title-box">{{ survey.questions.q4 }}</li>
-                        </ol>
-                        <div class="form-check">
-                            <input
-                                id="revisionSi"
-                                v-model="form.wants_review"
-                                class="form-check-input"
-                                type="radio"
-                                name="quiereRevision"
-                                :value="true"
-                            />
-                            <label class="form-check-label" for="revisionSi">{{ survey.copy.yes_label }}</label>
-                        </div>
-                        <div class="form-check">
-                            <input
-                                id="revisionNo"
-                                v-model="form.wants_review"
-                                class="form-check-input"
-                                type="radio"
-                                name="quiereRevision"
-                                :value="false"
-                            />
-                            <label class="form-check-label" for="revisionNo">{{ survey.copy.no_label }}</label>
+                        <div class="field-row">
+                            <div
+                                v-for="field in contactFields"
+                                :key="field.name"
+                                class="field"
+                            >
+                                <label :for="`contact.${field.name}`"
+                                    >{{ field.label
+                                    }}<span
+                                        v-if="field.required"
+                                        class="required"
+                                        >*</span
+                                    ></label
+                                >
+                                <SurveyFieldInput
+                                    v-model="form.contact[field.name]"
+                                    :field="field"
+                                    :id="`contact.${field.name}`"
+                                    :errors="errors"
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
             </section>
-
-            <!-- 5. Invitados -->
-            <section v-if="survey.guests_count > 0" class="mb-5">
+            <section
+                v-for="(question, index) in questions"
+                :key="question.name"
+                class="mb-4"
+            >
                 <div class="survey-container">
                     <div class="box-card">
-                        <ol :start="guestQuestionNumber">
-                            <li class="title-box">{{ survey.questions.q5 }}</li>
-                        </ol>
-                        <div v-for="i in guestRows" :key="i" class="field-row mb-3">
-                            <input
-                                v-model="form.guests[i].name"
-                                type="text"
-                                class="form-control"
-                                placeholder="Nombre completo"
-                            />
-                            <input
-                                v-model="form.guests[i].email"
-                                type="email"
-                                class="form-control"
-                                placeholder="Correo electrónico"
-                            />
-                            <input
-                                v-model="form.guests[i].topics"
-                                type="text"
-                                class="form-control"
-                                placeholder="Temas de interés"
-                            />
-                            <p v-if="errorFor(`guests.${i}.email`)" class="field-error field-error--row">
-                                {{ errorFor(`guests.${i}.email`) }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Preguntas adicionales configuradas para esta encuesta -->
-            <section v-for="question in survey.extra_questions" :key="question.name" class="mb-4">
-                <div class="survey-container">
-                    <div class="box-card">
-                        <ol :start="question.number">
+                        <ol :start="index + 1">
                             <li class="title-box">
-                                {{ question.label }}<span v-if="question.required" class="required">*</span>
+                                {{ question.label
+                                }}<span
+                                    v-if="question.required"
+                                    class="required"
+                                    >*</span
+                                >
                             </li>
                         </ol>
-
-                        <input
-                            v-if="['text', 'number'].includes(question.type)"
-                            :id="`extra_${question.name}`"
-                            :type="question.type"
-                            v-model="form.extra[question.name]"
-                            class="form-control"
+                        <SurveyFieldInput
+                            v-model="form.answers[question.name]"
+                            :field="question"
+                            :id="`answers.${question.name}`"
+                            :errors="errors"
                         />
-
-                        <textarea
-                            v-else-if="question.type === 'textarea'"
-                            :id="`extra_${question.name}`"
-                            v-model="form.extra[question.name] as string"
-                            class="form-control"
-                            rows="3"
-                        ></textarea>
-
-                        <select
-                            v-else-if="question.type === 'select'"
-                            :id="`extra_${question.name}`"
-                            v-model="form.extra[question.name] as string"
-                            class="form-control form-select"
-                        >
-                            <option value="" disabled>Selecciona una opción</option>
-                            <option v-for="option in question.options" :key="option" :value="option">
-                                {{ option }}
-                            </option>
-                        </select>
-
-                        <template v-else-if="question.type === 'radio'">
-                            <div v-for="option in question.options" :key="option" class="form-check">
-                                <input
-                                    :id="`extra_${question.name}_${option}`"
-                                    v-model="form.extra[question.name] as string"
-                                    class="form-check-input"
-                                    type="radio"
-                                    :name="`extra_${question.name}`"
-                                    :value="option"
-                                />
-                                <label class="form-check-label" :for="`extra_${question.name}_${option}`">
-                                    {{ option }}
-                                </label>
-                            </div>
-                        </template>
-
-                        <div v-else-if="question.type === 'checkbox'" class="form-check">
-                            <input
-                                :id="`extra_${question.name}`"
-                                v-model="form.extra[question.name] as boolean"
-                                class="form-check-input"
-                                type="checkbox"
-                            />
-                            <label class="form-check-label" :for="`extra_${question.name}`">{{ survey.copy.yes_label }}</label>
-                        </div>
-
-                        <template v-else-if="question.type === 'rating'">
-                            <div v-for="star in [5, 4, 3, 2, 1]" :key="star" class="form-check">
-                                <input
-                                    :id="`extra_${question.name}_${star}`"
-                                    v-model="form.extra[question.name]"
-                                    class="form-check-input"
-                                    type="radio"
-                                    :name="`extra_${question.name}`"
-                                    :value="star"
-                                />
-                                <label class="form-check-label stars" :for="`extra_${question.name}_${star}`">
-                                    <svg v-for="i in star" :key="i" class="star" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path
-                                            d="M12 3.2l2.6 5.3 5.8.85-4.2 4.1 1 5.75L12 16.5l-5.2 2.7 1-5.75-4.2-4.1 5.8-.85L12 3.2z"
-                                        />
-                                    </svg>
-                                    <span class="visually-hidden">{{ star }} de 5</span>
-                                </label>
-                            </div>
-                        </template>
-
-                        <p v-if="errorFor(`extra.${question.name}`)" class="field-error">
-                            {{ errorFor(`extra.${question.name}`) }}
-                        </p>
                     </div>
                 </div>
             </section>
 
-            <section class="mb-5 pb-5">
+            <section class="pb-5">
                 <div class="survey-container text-center">
-                    <p v-if="errorFor('survey')" class="field-error mb-3">{{ errorFor('survey') }}</p>
-                    <button type="submit" class="btn btn-primary" :disabled="form.processing">
-                        {{ form.processing ? 'Enviando...' : survey.copy.submit_label }}
+                    <p v-if="errors.survey" class="field-error mb-3">
+                        {{ errors.survey }}
+                    </p>
+                    <button
+                        type="submit"
+                        class="btn btn-primary"
+                        :disabled="form.processing"
+                    >
+                        {{
+                            form.processing ? 'Enviando...' : view.submit_label
+                        }}
                     </button>
                 </div>
             </section>
@@ -479,14 +334,17 @@ const submit = (): void => {
                     </a>
                 </div>
                 <span class="text-muted">
-                    {{ client.footer || `Copyright © ${new Date().getFullYear()} - ${client.name} | Todos los derechos reservados.` }}
+                    {{
+                        client.footer ||
+                        `Copyright © ${new Date().getFullYear()} - ${client.name} | Todos los derechos reservados.`
+                    }}
                 </span>
             </div>
         </footer>
     </div>
 </template>
 
-<style scoped>
+<style>
 /* Réplica de scss/_utilities, _forms, _buttons y _footer de las encuestas
    estáticas. Los colores de marca entran por --accent / --accent-text. */
 .survey-page {
@@ -501,11 +359,31 @@ const submit = (): void => {
     margin: 0 auto;
     padding: 0 0.75rem;
 }
-@media (min-width: 576px) { .survey-container { max-width: 540px; } }
-@media (min-width: 768px) { .survey-container { max-width: 720px; } }
-@media (min-width: 992px) { .survey-container { max-width: 960px; } }
-@media (min-width: 1200px) { .survey-container { max-width: 1140px; } }
-@media (min-width: 1400px) { .survey-container { max-width: 1320px; } }
+@media (min-width: 576px) {
+    .survey-container {
+        max-width: 540px;
+    }
+}
+@media (min-width: 768px) {
+    .survey-container {
+        max-width: 720px;
+    }
+}
+@media (min-width: 992px) {
+    .survey-container {
+        max-width: 960px;
+    }
+}
+@media (min-width: 1200px) {
+    .survey-container {
+        max-width: 1140px;
+    }
+}
+@media (min-width: 1400px) {
+    .survey-container {
+        max-width: 1320px;
+    }
+}
 
 .cover {
     background-position: center center;
@@ -516,6 +394,7 @@ const submit = (): void => {
 /* La portada suele traer la marca quemada; cuando se sube un logo aparte
    va arriba y centrado, como la navbar del original. */
 .header-cover {
+    background-image: var(--hero-image);
     height: 45vh;
     min-height: 260px;
     display: flex;
@@ -523,17 +402,40 @@ const submit = (): void => {
     justify-content: center;
     padding: 1.5rem;
 }
-.header-cover--empty { background-color: #f4f4f4; }
-.header-logo { max-width: 100%; max-height: 70px; width: auto; }
+.header-cover--empty {
+    background-color: #f4f4f4;
+}
+.header-logo {
+    max-width: 100%;
+    max-height: 70px;
+    width: auto;
+}
 
-.py-6 { padding-top: 6rem; padding-bottom: 6rem; }
-.pt-5 { padding-top: 3rem; }
-.mb-1 { margin-bottom: 0.25rem; }
-.mb-3 { margin-bottom: 1rem; }
-.mb-4 { margin-bottom: 1.5rem; }
-.mb-5 { margin-bottom: 3rem; }
-.pb-5 { padding-bottom: 3rem; }
-.text-center { text-align: center; }
+.py-6 {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
+.pt-5 {
+    padding-top: 3rem;
+}
+.mb-1 {
+    margin-bottom: 0.25rem;
+}
+.mb-3 {
+    margin-bottom: 1rem;
+}
+.mb-4 {
+    margin-bottom: 1.5rem;
+}
+.mb-5 {
+    margin-bottom: 3rem;
+}
+.pb-5 {
+    padding-bottom: 3rem;
+}
+.text-center {
+    text-align: center;
+}
 
 .title {
     color: var(--heading);
@@ -561,10 +463,16 @@ const submit = (): void => {
     font-size: 1rem;
     margin: 0 0 1rem;
 }
-.survey-intro :deep(p:last-child) { margin-bottom: 0; }
+.survey-intro :deep(p:last-child) {
+    margin-bottom: 0;
+}
 .survey-intro :deep(ul),
-.survey-intro :deep(ol) { margin: 0 0 1rem; }
-.survey-intro :deep(a) { color: var(--accent); }
+.survey-intro :deep(ol) {
+    margin: 0 0 1rem;
+}
+.survey-intro :deep(a) {
+    color: var(--accent);
+}
 
 hr {
     opacity: 1;
@@ -574,7 +482,10 @@ hr {
     margin: 0;
 }
 
-.state-block { padding: 4rem 0.75rem; text-align: center; }
+.state-block {
+    padding: 4rem 0.75rem;
+    text-align: center;
+}
 
 .box-card {
     border: 1px solid #f4f4f4;
@@ -588,7 +499,10 @@ ol {
     margin: 0;
     list-style: decimal outside;
 }
-ol li::marker { font-weight: 700; color: var(--text); }
+ol li::marker {
+    font-weight: 700;
+    color: var(--text);
+}
 
 .title-box {
     font-size: 16px;
@@ -597,7 +511,10 @@ ol li::marker { font-weight: 700; color: var(--text); }
     color: var(--text);
     margin-bottom: 1rem;
 }
-.required { color: #dc3545; margin-left: 0.25rem; }
+.required {
+    color: #dc3545;
+    margin-left: 0.25rem;
+}
 
 .form-control {
     display: block;
@@ -611,22 +528,43 @@ ol li::marker { font-weight: 700; color: var(--text); }
     border: 1px solid #f4f4f4;
     border-radius: var(--radius-field);
 }
-.form-control::placeholder { color: #999999; opacity: 1; }
+.form-control::placeholder {
+    color: #999999;
+    opacity: 1;
+}
 .form-control:focus {
     outline: 0;
     border-color: var(--accent);
     box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--accent) 25%, transparent);
 }
-.form-select { appearance: none; }
-
-.field-row { display: flex; gap: 1rem; width: 100%; }
-.field { flex: 1 1 0; min-width: 0; }
-@media (max-width: 767.98px) {
-    .field-row { flex-direction: column; gap: 0.5rem; }
+.form-select {
+    appearance: none;
 }
 
-.field-error { color: #dc3545; font-size: 0.875rem; margin: 0.25rem 0 0; }
-.field-error--row { flex-basis: 100%; }
+.field-row {
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+}
+.field {
+    flex: 1 1 0;
+    min-width: 0;
+}
+@media (max-width: 767.98px) {
+    .field-row {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+
+.field-error {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin: 0.25rem 0 0;
+}
+.field-error--row {
+    flex-basis: 100%;
+}
 
 .form-check {
     display: flex;
@@ -644,9 +582,15 @@ ol li::marker { font-weight: 700; color: var(--text); }
     outline: 0;
     box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--accent) 25%, transparent);
 }
-.form-check-label { cursor: pointer; }
+.form-check-label {
+    cursor: pointer;
+}
 
-.stars { display: inline-flex; align-items: center; gap: 2px; }
+.stars {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
 .star {
     width: 24px;
     height: 24px;
@@ -685,18 +629,43 @@ ol li::marker { font-weight: 700; color: var(--text); }
     font-weight: 700;
     transition: filter 0.15s ease-in-out;
 }
-.btn-primary:hover:not(:disabled) { filter: brightness(0.94); }
-.btn-primary:disabled { opacity: 0.65; cursor: not-allowed; }
+.btn-primary:hover:not(:disabled) {
+    filter: brightness(0.94);
+}
+.btn-primary:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
 
-.bg-footer { background-color: #f4f4f4; }
-.footer-inner { padding: 1.5rem 0.75rem; text-align: center; }
-.footer-social { margin-bottom: 0.75rem; }
+.bg-footer {
+    background-color: #f4f4f4;
+}
+.footer-inner {
+    padding: 1.5rem 0.75rem;
+    text-align: center;
+}
+.footer-social {
+    margin-bottom: 0.75rem;
+}
 .footer-social a {
     margin: 0 0.5rem;
     font-size: 1.25rem;
     color: #aaaaaa;
     transition: color 0.15s ease-in-out;
 }
-.footer-social a:hover { color: var(--accent); }
-footer .text-muted { color: var(--text); font-size: 0.75rem; }
+.footer-social a:hover {
+    color: var(--accent);
+}
+footer .text-muted {
+    color: var(--text);
+    font-size: 0.75rem;
+}
+.contact-description {
+    margin-bottom: 0.5rem;
+}
+@media (max-width: 767px) {
+    .header-cover {
+        background-image: var(--mobile-hero-image, var(--hero-image));
+    }
+}
 </style>

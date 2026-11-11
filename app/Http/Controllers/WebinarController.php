@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Client;
-use App\Models\Webinar;
 use App\Models\Submission;
+use App\Models\Webinar;
 use App\Services\SubmissionZoomRegistrar;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -28,17 +28,17 @@ class WebinarController extends Controller
         $client = $request->attributes->get('client');
 
         // Si no hay cliente detectado, intentar obtener del parámetro de ruta (desarrollo local)
-        if (!$client && $clientSlug) {
+        if (! $client && $clientSlug) {
             $client = Client::with('socialMedia')->where('slug', $clientSlug)->firstOrFail();
         }
 
         // Si aún no hay cliente, error 404
-        if (!$client) {
+        if (! $client) {
             abort(404, 'Cliente no encontrado. Verifica que el subdominio sea correcto o usa la ruta /client/{client}/webinars/{slug}');
         }
 
         // Cargar relaciones si no están cargadas
-        if (!$client->relationLoaded('socialMedia')) {
+        if (! $client->relationLoaded('socialMedia')) {
             $client->load('socialMedia');
         }
 
@@ -59,7 +59,7 @@ class WebinarController extends Controller
             return route($name, ['slug' => $webinar->slug]);
         }
 
-        return route($name . '.local', ['client' => $client->slug, 'slug' => $webinar->slug]);
+        return route($name.'.local', ['client' => $client->slug, 'slug' => $webinar->slug]);
     }
 
     public function show(Request $request, $clientSlug = null, $webinarSlug = null)
@@ -80,7 +80,7 @@ class WebinarController extends Controller
         $webinarUrl = $this->webinarRoute($request, 'webinar.show', $client, $webinar);
 
         // Solo accesible tras registrarse; si no, de vuelta al webinar
-        if (!$webinar->thank_you_enabled || !$request->session()->get("webinar_registered_{$webinar->id}")) {
+        if (! $webinar->thank_you_enabled || ! $request->session()->get("webinar_registered_{$webinar->id}")) {
             return redirect($webinarUrl);
         }
 
@@ -106,6 +106,11 @@ class WebinarController extends Controller
         $rules = [];
         if ($webinar->form_schema) {
             foreach ($webinar->form_schema as $field) {
+                if (($field['type'] ?? '') === 'multiselect') {
+                    $rules = array_merge($rules, \App\Support\DynamicFieldRules::forField($field, $field['name']));
+
+                    continue;
+                }
                 $fieldRules = [];
 
                 if ($field['required'] ?? false) {
@@ -124,7 +129,7 @@ class WebinarController extends Controller
                     $fieldRules[] = 'min:8';
                 }
 
-                if (!empty($fieldRules)) {
+                if (! empty($fieldRules)) {
                     $rules[$field['name']] = $fieldRules;
                 }
             }
@@ -143,7 +148,7 @@ class WebinarController extends Controller
 
         // Clean phone number if present
         foreach ($submissionData as $key => $value) {
-            if (str_contains(strtolower($key), 'phone') || str_contains(strtolower($key), 'tel')) {
+            if (is_string($value) && (str_contains(strtolower($key), 'phone') || str_contains(strtolower($key), 'tel'))) {
                 $submissionData[$key] = preg_replace('/[^\d+]/', '', $value);
             }
         }
@@ -168,8 +173,8 @@ class WebinarController extends Controller
                 if (
                     ($script['platform'] ?? '') === 'facebook' &&
                     ($script['enabled'] ?? false) &&
-                    !empty($script['pixel_id']) &&
-                    !empty($script['access_token'])
+                    ! empty($script['pixel_id']) &&
+                    ! empty($script['access_token'])
                 ) {
                     $metaService->sendCompleteRegistration(
                         $script['pixel_id'],
@@ -185,7 +190,7 @@ class WebinarController extends Controller
         }
 
         // Send lead to Clay for enrichment if configured
-        if (!empty($webinar->clay_webhook_url)) {
+        if (! empty($webinar->clay_webhook_url)) {
             $clayService = app(\App\Services\ClayService::class);
             $leadData = $clayService->prepareLeadData(
                 $submissionData,

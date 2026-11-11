@@ -11,8 +11,8 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TagsInput;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -131,6 +131,10 @@ class WebinarForm
                     ->disk('public')
                     ->directory('webinars/heroes')
                     ->columnSpanFull(),
+                FileUpload::make('mobile_hero_image')
+                    ->label('Mobile Image')
+                    ->helperText('Optional. Uses the main image when empty.')
+                    ->image()->disk('public')->directory('webinars/heroes')->columnSpanFull(),
                 FileUpload::make('header_logo')
                     ->image()
                     ->disk('public')
@@ -233,9 +237,10 @@ class WebinarForm
                             ->multiple()
                             ->options(function (Get $get) {
                                 $schema = $get('form_schema') ?? [];
+
                                 return collect($schema)
-                                    ->filter(fn ($f) => !empty($f['name']) && !empty($f['label']))
-                                    ->mapWithKeys(fn ($f) => [$f['name'] => ($f['label'] ?? $f['name']) . ' (' . ($f['type'] ?? 'text') . ')'])
+                                    ->filter(fn ($f) => ! empty($f['name']) && ! empty($f['label']))
+                                    ->mapWithKeys(fn ($f) => [$f['name'] => ($f['label'] ?? $f['name']).' ('.($f['type'] ?? 'text').')'])
                                     ->toArray();
                             })
                             ->helperText('Text fields show top 10 values. Select/Radio fields show full distribution.')
@@ -243,6 +248,7 @@ class WebinarForm
                     ])
                     ->columnSpanFull()
                     ->collapsible(),
+                TextInput::make('submit_label')->label('Submit button')->maxLength(60)->placeholder('Registrarme'),
                 Section::make('Form Builder')
                     ->schema([
                         Repeater::make('form_schema')
@@ -257,6 +263,7 @@ class WebinarForm
                                         'checkbox' => 'Checkbox',
                                         'textarea' => 'Textarea',
                                         'radio' => 'Radio Button Group',
+                                        'multiselect' => 'Multiple Choice Button Group',
                                     ])
                                     ->required()
                                     ->live(),
@@ -269,13 +276,13 @@ class WebinarForm
                                 Toggle::make('required')
                                     ->default(true),
                                 TagsInput::make('options')
-                                    ->visible(fn (Get $get) => in_array($get('type'), ['select', 'radio']))
-                                    ->required(fn (Get $get) => in_array($get('type'), ['select', 'radio']))
+                                    ->visible(fn (Get $get) => in_array($get('type'), ['select', 'radio', 'multiselect']))
+                                    ->required(fn (Get $get) => in_array($get('type'), ['select', 'radio', 'multiselect']))
                                     ->helperText(fn (Get $get) => $get('type') === 'radio' ? 'Ingresa las opciones para el grupo (mínimo 2).' : 'Ingresa las opciones para el campo de selección.')
                                     ->rules([
                                         fn (Get $get) => function (string $attribute, $value, \Closure $fail) use ($get) {
-                                            if ($get('type') === 'radio' && (!is_array($value) || count($value) < 2)) {
-                                                $fail('El grupo de botones de radio debe tener al menos 2 opciones.');
+                                            if (in_array($get('type'), ['radio', 'multiselect']) && (! is_array($value) || count($value) < 2)) {
+                                                $fail('El grupo de opciones debe tener al menos 2 opciones.');
                                             }
                                         },
                                     ]),
@@ -392,17 +399,17 @@ class WebinarForm
         $names = array_column($schema, 'name');
 
         $toAdd = [];
-        if (!in_array('email', $names)) {
+        if (! in_array('email', $names)) {
             $toAdd[] = ['type' => 'email', 'label' => 'Email', 'name' => 'email', 'required' => true];
         }
-        if (!in_array('first_name', $names) && !in_array('nombre', $names)) {
+        if (! in_array('first_name', $names) && ! in_array('nombre', $names)) {
             $toAdd[] = ['type' => 'text', 'label' => 'Nombre', 'name' => 'first_name', 'required' => true];
         }
-        if (!in_array('last_name', $names) && !in_array('apellido', $names)) {
+        if (! in_array('last_name', $names) && ! in_array('apellido', $names)) {
             $toAdd[] = ['type' => 'text', 'label' => 'Apellido', 'name' => 'last_name', 'required' => true];
         }
 
-        if (!empty($toAdd)) {
+        if (! empty($toAdd)) {
             $set("{$path}form_schema", array_merge($schema, $toAdd));
         }
     }

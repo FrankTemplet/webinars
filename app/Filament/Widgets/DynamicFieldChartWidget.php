@@ -3,7 +3,6 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Submission;
-use App\Models\Webinar;
 use Carbon\Carbon;
 use Filament\Widgets\ChartWidget;
 use Filament\Widgets\Concerns\InteractsWithPageFilters;
@@ -13,7 +12,9 @@ class DynamicFieldChartWidget extends ChartWidget
     use InteractsWithPageFilters;
 
     public string $fieldName = '';
+
     public string $fieldLabel = '';
+
     public string $fieldType = 'text';
 
     protected static bool $isDiscovered = false;
@@ -45,7 +46,7 @@ class DynamicFieldChartWidget extends ChartWidget
 
         $submissions = $query->get();
 
-        $isSelectType = in_array($this->fieldType, ['select', 'radio']);
+        $isSelectType = in_array($this->fieldType, ['select', 'radio', 'multiselect']);
 
         $counts = [];
         foreach ($submissions as $sub) {
@@ -53,12 +54,14 @@ class DynamicFieldChartWidget extends ChartWidget
             if ($value === null || $value === '') {
                 continue;
             }
-            $counts[$value] = ($counts[$value] ?? 0) + 1;
+            foreach (is_array($value) ? array_unique($value) : [$value] as $option) {
+                $counts[$option] = ($counts[$option] ?? 0) + 1;
+            }
         }
 
         arsort($counts);
 
-        if (!$isSelectType) {
+        if (! $isSelectType) {
             $counts = array_slice($counts, 0, 10, true);
         }
 
@@ -92,7 +95,7 @@ class DynamicFieldChartWidget extends ChartWidget
 
     protected function getOptions(): array
     {
-        $isSelectType = in_array($this->fieldType, ['select', 'radio']);
+        $isSelectType = in_array($this->fieldType, ['select', 'radio', 'multiselect']);
 
         return [
             'indexAxis' => $isSelectType ? 'x' : 'y',

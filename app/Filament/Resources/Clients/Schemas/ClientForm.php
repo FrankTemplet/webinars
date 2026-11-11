@@ -25,6 +25,9 @@ class ClientForm
                     ->image()
                     ->disk('public')
                     ->directory('clients/logos'),
+                FileUpload::make('favicon')
+                    ->image()->disk('public')->directory('clients/favicons')
+                    ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp', 'image/x-icon', 'image/vnd.microsoft.icon']),
                 Textarea::make('footer_text')
                     ->label('Pie de página')
                     ->helperText('Se usa en las landings de webinar, la página de gracias y las encuestas de este cliente. Acepta {year} y {client}. Si se deja vacío, cada página usa su texto por defecto.')

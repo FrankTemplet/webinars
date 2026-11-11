@@ -10,15 +10,14 @@ class SurveyAdminFormTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_survey_form_describes_both_fixed_and_additional_questions(): void
+    public function test_survey_form_has_configurable_questions_and_contact(): void
     {
         $this->actingAs(User::factory()->create(['role' => 'admin']));
 
         $response = $this->get('/admin/surveys/create');
 
         $response->assertStatus(200);
-        $response->assertSee('Template Questions');
-        $response->assertSee('Additional Questions');
+        $response->assertSee('Questions');
         $response->assertSee('Contact Block');
 
         // La copia vieja decía que la plantilla era lo único editable.

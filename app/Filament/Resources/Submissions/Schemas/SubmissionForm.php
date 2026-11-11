@@ -5,8 +5,8 @@ namespace App\Filament\Resources\Submissions\Schemas;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -26,7 +26,7 @@ class SubmissionForm
                     ]),
                 Section::make('Datos de la Suscripción')
                     ->schema(function ($record) {
-                        if (!$record || !$record->webinar || !$record->webinar->form_schema) {
+                        if (! $record || ! $record->webinar || ! $record->webinar->form_schema) {
                             return [
                                 TextInput::make('data')
                                     ->formatStateUsing(fn ($state) => is_array($state) ? json_encode($state) : $state)
@@ -48,6 +48,8 @@ class SubmissionForm
                                 'number' => TextInput::make("data.{$name}")->numeric(),
                                 'textarea' => Textarea::make("data.{$name}"),
                                 'select' => Select::make("data.{$name}")
+                                    ->options(array_combine($field['options'] ?? [], $field['options'] ?? [])),
+                                'multiselect' => CheckboxList::make("data.{$name}")
                                     ->options(array_combine($field['options'] ?? [], $field['options'] ?? [])),
                                 'radio' => Radio::make("data.{$name}")
                                     ->options(array_combine($field['options'] ?? [], $field['options'] ?? [])),

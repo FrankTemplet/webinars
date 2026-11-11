@@ -1,18 +1,31 @@
 <script setup lang="ts">
-import { useForm } from '@inertiajs/vue3';
-import { ref } from "vue";
 import { generateUUID } from '@/lib/utils';
+import { useForm } from '@inertiajs/vue3';
+import { ref } from 'vue';
 
 // Declare global window properties for tracking scripts
 declare global {
     interface Window {
-        fbq?: (action: string, event: string, params?: any, options?: { eventID?: string }) => void;
+        fbq?: (
+            action: string,
+            event: string,
+            params?: any,
+            options?: { eventID?: string },
+        ) => void;
         lintrk?: (action: string, params?: any) => void;
     }
 }
 
-
-type FieldType = 'text' | 'email' | 'number' | 'tel' | 'textarea' | 'select' | 'checkbox' | 'radio';
+type FieldType =
+    | 'text'
+    | 'email'
+    | 'number'
+    | 'tel'
+    | 'textarea'
+    | 'select'
+    | 'checkbox'
+    | 'radio'
+    | 'multiselect';
 
 interface FormField {
     name: string;
@@ -41,6 +54,7 @@ interface Props {
     sessions?: Session[];
     sessionsLabel?: string | null;
     submitUrl: string;
+    submitLabel?: string | null;
     trackingScripts?: TrackingScript[];
     /** En el preview del panel el formulario se ve pero no se envía. */
     preview?: boolean;
@@ -54,8 +68,10 @@ const props = defineProps<Props>();
 
 // Initialize form data based on schema with correct types
 const formData: FormData = {};
-props.schema.forEach(field => {
-    if (field.type === 'checkbox') {
+props.schema.forEach((field) => {
+    if (field.type === 'multiselect') {
+        formData[field.name] = [];
+    } else if (field.type === 'checkbox') {
         formData[field.name] = false;
     } else {
         formData[field.name] = '';
@@ -68,9 +84,15 @@ if (props.sessions?.length) {
 
 // Capture UTM parameters from URL
 const urlParams = new URLSearchParams(window.location.search);
-const utmParams = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'] as const;
+const utmParams = [
+    'utm_source',
+    'utm_medium',
+    'utm_campaign',
+    'utm_term',
+    'utm_content',
+] as const;
 
-utmParams.forEach(param => {
+utmParams.forEach((param) => {
     const value = urlParams.get(param);
     if (value) {
         formData[param] = value;
@@ -114,7 +136,9 @@ const handlePhoneInput = (fieldName: string, event: Event): void => {
 
     // Calcular nueva posición del cursor
     // Contar cuántos números hay antes de la posición actual del cursor
-    const numbersBeforeCursor = input.value.slice(0, cursorPosition).replace(/\D/g, '').length;
+    const numbersBeforeCursor = input.value
+        .slice(0, cursorPosition)
+        .replace(/\D/g, '').length;
 
     // Encontrar la posición en el nuevo valor formateado que corresponde a esa cantidad de números
     let newCursorPosition = 0;
@@ -144,7 +168,9 @@ const handlePhoneInput = (fieldName: string, event: Event): void => {
 const triggerFacebookConversion = (eventId: string): void => {
     if (typeof window.fbq === 'function') {
         window.fbq('track', 'CompleteRegistration', {}, { eventID: eventId });
-        console.log(`Facebook Pixel: CompleteRegistration event triggered. Event ID: ${eventId}`);
+        console.log(
+            `Facebook Pixel: CompleteRegistration event triggered. Event ID: ${eventId}`,
+        );
     } else {
         console.warn('Facebook Pixel not loaded');
     }
@@ -154,7 +180,9 @@ const triggerFacebookConversion = (eventId: string): void => {
 const triggerLinkedInConversion = (conversionId: string): void => {
     if (typeof window.lintrk === 'function') {
         window.lintrk('track', { conversion_id: parseInt(conversionId) });
-        console.log(`LinkedIn Insight Tag: Conversion ${conversionId} triggered`);
+        console.log(
+            `LinkedIn Insight Tag: Conversion ${conversionId} triggered`,
+        );
     } else {
         console.warn('LinkedIn Insight Tag not loaded');
     }
@@ -166,7 +194,7 @@ const triggerTrackingEvents = (eventId: string): void => {
         return;
     }
 
-    props.trackingScripts.forEach(script => {
+    props.trackingScripts.forEach((script) => {
         if (!script.enabled) return;
 
         if (script.platform === 'facebook' && script.pixel_id) {
@@ -200,8 +228,11 @@ const submit = (): void => {
 
 <template>
     <form @submit.prevent="submit" class="w-full">
-        <div v-for="(field, index) in schema" :key="index" class="mb-3 relative">
-
+        <div
+            v-for="(field, index) in schema"
+            :key="index"
+            class="relative mb-3"
+        >
             <div class="form-floating relative">
                 <!-- Text / Email / Number -->
                 <input
@@ -211,7 +242,7 @@ const submit = (): void => {
                     :placeholder="field.label"
                     v-model="form[field.name]"
                     :required="field.required"
-                    class="form-field block w-full h-[58px] px-3 pt-[1.625rem] pb-[0.625rem] peer placeholder-transparent"
+                    class="form-field peer block h-[58px] w-full px-3 pt-[1.625rem] pb-[0.625rem] placeholder-transparent"
                 />
 
                 <!-- Phone Input with Mask -->
@@ -219,14 +250,29 @@ const submit = (): void => {
                     v-else-if="field.type === 'tel'"
                     type="tel"
                     :id="field.name"
-                    :ref="(el) => phoneInputs[field.name] = el as HTMLInputElement"
+                    :ref="
+                        (el) =>
+                            (phoneInputs[field.name] = el as HTMLInputElement)
+                    "
                     :placeholder="field.label"
                     :value="form[field.name]"
                     @input="handlePhoneInput(field.name, $event)"
-                    @keypress="(e) => { if (!/[0-9]/.test(e.key) && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'Tab' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') e.preventDefault(); }"
+                    @keypress="
+                        (e) => {
+                            if (
+                                !/[0-9]/.test(e.key) &&
+                                e.key !== 'Backspace' &&
+                                e.key !== 'Delete' &&
+                                e.key !== 'Tab' &&
+                                e.key !== 'ArrowLeft' &&
+                                e.key !== 'ArrowRight'
+                            )
+                                e.preventDefault();
+                        }
+                    "
                     :required="field.required"
                     maxlength="14"
-                    class="form-field block w-full h-[58px] px-3 pt-[1.625rem] pb-[0.625rem] peer placeholder-transparent"
+                    class="form-field peer block h-[58px] w-full px-3 pt-[1.625rem] pb-[0.625rem] placeholder-transparent"
                 />
 
                 <!-- Textarea -->
@@ -236,7 +282,7 @@ const submit = (): void => {
                     v-model="form[field.name] as string"
                     :placeholder="field.label"
                     :required="field.required"
-                    class="form-field block w-full px-3 pt-[1.625rem] pb-[0.625rem] peer placeholder-transparent h-auto min-h-[100px]"
+                    class="form-field peer block h-auto min-h-[100px] w-full px-3 pt-[1.625rem] pb-[0.625rem] placeholder-transparent"
                 ></textarea>
 
                 <!-- Select -->
@@ -245,39 +291,68 @@ const submit = (): void => {
                     :id="field.name"
                     v-model="form[field.name] as string"
                     :required="field.required"
-                    class="form-field block w-full h-[58px] px-3 pt-[1.625rem] pb-[0.625rem] peer appearance-none"
+                    class="form-field peer block h-[58px] w-full appearance-none px-3 pt-[1.625rem] pb-[0.625rem]"
                 >
                     <option value="" disabled selected></option>
-                    <option v-for="option in field.options" :key="option" :value="option">
+                    <option
+                        v-for="option in field.options"
+                        :key="option"
+                        :value="option"
+                    >
                         {{ option }}
                     </option>
                 </select>
 
                 <!-- Radio Button Group -->
-                <div v-else-if="field.type === 'radio'" class="pt-2">
-                    <label class="group-label block text-sm font-semibold mb-2">
-                        {{ field.label }} <span v-if="field.required" class="text-red-500">*</span>
-                    </label>
+                <fieldset
+                    v-else-if="['radio', 'multiselect'].includes(field.type)"
+                    class="pt-2"
+                >
+                    <legend
+                        class="group-label mb-2 block text-sm font-semibold"
+                    >
+                        {{ field.label }}
+                        <span v-if="field.required" class="text-red-500"
+                            >*</span
+                        >
+                    </legend>
                     <div class="flex flex-row flex-wrap gap-x-6 gap-y-2">
-                        <div v-for="option in field.options" :key="option" class="flex items-center whitespace-nowrap">
+                        <label
+                            v-for="option in field.options"
+                            :key="option"
+                            :for="`${field.name}_${option}`"
+                            class="flex min-h-[44px] items-center"
+                            :class="{
+                                'multiple-choice': field.type === 'multiselect',
+                            }"
+                        >
                             <input
                                 :id="`${field.name}_${option}`"
-                                type="radio"
+                                :type="
+                                    field.type === 'multiselect'
+                                        ? 'checkbox'
+                                        : 'radio'
+                                "
                                 :name="field.name"
                                 :value="option"
-                                v-model="form[field.name] as string"
-                                :required="field.required"
+                                v-model="form[field.name]"
+                                :required="
+                                    field.type === 'radio' && field.required
+                                "
                                 class="form-check-input h-4 w-4 cursor-pointer"
                             />
-                            <label :for="`${field.name}_${option}`" class="ml-2 block text-sm cursor-pointer">
+                            <span class="ml-2 block cursor-pointer text-sm">
                                 {{ option }}
-                            </label>
-                        </div>
+                            </span>
+                        </label>
                     </div>
-                </div>
+                </fieldset>
 
                 <!-- Checkbox (Custom styling) -->
-                <div v-else-if="field.type === 'checkbox'" class="flex items-center pt-2">
+                <div
+                    v-else-if="field.type === 'checkbox'"
+                    class="flex items-center pt-2"
+                >
                     <input
                         :id="field.name"
                         type="checkbox"
@@ -291,39 +366,66 @@ const submit = (): void => {
 
                 <!-- Floating Label -->
                 <label
-                    v-if="!['checkbox', 'radio'].includes(field.type)"
+                    v-if="
+                        !['checkbox', 'radio', 'multiselect'].includes(
+                            field.type,
+                        )
+                    "
                     :for="field.name"
-                    class="absolute top-0 left-0 h-full px-3 py-4 transition-all duration-200 ease-in-out origin-[0_0] transform scale-100 pointer-events-none peer-focus:scale-85 peer-focus:-translate-y-2 peer-not-placeholder-shown:scale-85 peer-not-placeholder-shown:-translate-y-2 peer-focus:opacity-65 peer-not-placeholder-shown:opacity-65"
+                    class="pointer-events-none absolute top-0 left-0 h-full origin-[0_0] scale-100 transform px-3 py-4 transition-all duration-200 ease-in-out peer-not-placeholder-shown:-translate-y-2 peer-not-placeholder-shown:scale-85 peer-not-placeholder-shown:opacity-65 peer-focus:-translate-y-2 peer-focus:scale-85 peer-focus:opacity-65"
                 >
                     {{ field.label }}
                 </label>
             </div>
 
-            <div v-if="form.errors[field.name]" class="text-sm text-red-600 mt-1">
+            <div
+                v-for="(message, key) in Object.fromEntries(
+                    Object.entries(form.errors).filter(([key]) =>
+                        key.startsWith(field.name + '.'),
+                    ),
+                )"
+                :key="key"
+                role="alert"
+                class="mt-1 text-sm text-red-600"
+            >
+                {{ message }}
+            </div>
+            <div
+                v-if="form.errors[field.name]"
+                class="mt-1 text-sm text-red-600"
+            >
                 {{ form.errors[field.name] }}
             </div>
         </div>
 
         <!-- Sesiones: una invitación de Zoom por cada una que elija -->
         <div v-if="sessions?.length" class="mb-3 pt-2">
-            <label class="group-label block text-sm font-semibold mb-2">
-                {{ sessionsLabel || '¿A qué sesiones quieres asistir?' }} <span class="text-red-500">*</span>
+            <label class="group-label mb-2 block text-sm font-semibold">
+                {{ sessionsLabel || '¿A qué sesiones quieres asistir?' }}
+                <span class="text-red-500">*</span>
             </label>
             <div class="flex flex-col gap-y-2">
-                <div v-for="session in sessions" :key="session.id" class="flex items-center">
+                <div
+                    v-for="session in sessions"
+                    :key="session.id"
+                    class="flex items-center"
+                >
                     <input
                         :id="`sessions_${session.id}`"
                         type="checkbox"
                         :value="session.id"
                         v-model="form.sessions as string[]"
-                        class="form-check-input h-4 w-4 rounded cursor-pointer"
+                        class="form-check-input h-4 w-4 cursor-pointer rounded"
                     />
-                    <label :for="`sessions_${session.id}`" class="ml-2 block text-sm cursor-pointer">
+                    <label
+                        :for="`sessions_${session.id}`"
+                        class="ml-2 block cursor-pointer text-sm"
+                    >
                         {{ session.label }}
                     </label>
                 </div>
             </div>
-            <div v-if="form.errors.sessions" class="text-sm text-red-600 mt-1">
+            <div v-if="form.errors.sessions" class="mt-1 text-sm text-red-600">
                 {{ form.errors.sessions }}
             </div>
         </div>
@@ -332,10 +434,10 @@ const submit = (): void => {
             <button
                 type="submit"
                 :disabled="form.processing"
-                class="btn-submit inline-block w-auto text-center align-middle cursor-pointer select-none border px-[1.75rem] py-[0.625rem] text-[1rem] leading-[1.5] transition-colors duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
+                class="btn-submit inline-block w-auto cursor-pointer border px-[1.75rem] py-[0.625rem] text-center align-middle text-[1rem] leading-[1.5] transition-colors duration-150 ease-in-out select-none disabled:cursor-not-allowed disabled:opacity-50"
             >
                 <span v-if="form.processing">Enviando...</span>
-                <span v-else>Registrarme</span>
+                <span v-else>{{ submitLabel || 'Registrarme' }}</span>
             </button>
         </div>
 
@@ -347,6 +449,19 @@ const submit = (): void => {
 </template>
 
 <style scoped>
+.multiple-choice {
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-field);
+    padding: 0.5rem 0.75rem;
+}
+.multiple-choice:has(input:checked) {
+    background: var(--accent);
+    color: var(--accent-text);
+}
+.multiple-choice:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
 /* Los colores y radios vienen de los tokens que la landing define en su div
    raíz (--accent, --text, --heading, --radius-field, --radius-button), con
    los valores originales del formulario como respaldo. */

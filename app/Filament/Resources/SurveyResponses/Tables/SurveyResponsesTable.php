@@ -78,6 +78,9 @@ class SurveyResponsesTable
                     ->formatStateUsing(fn ($state) => is_array($state) ? count($state) : 0)
                     ->toggleable(),
                 ...static::getExtraQuestionColumns(),
+                TextColumn::make('dynamic_answers')->label('Answers')
+                    ->getStateUsing(fn (SurveyResponse $record) => collect($record->answerEntries())->map(fn ($entry) => $entry['label'].': '.$entry['value'])->implode("\n"))
+                    ->wrap()->toggleable(),
                 TextColumn::make('utm_source')->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('utm_medium')->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('utm_campaign')->toggleable(isToggledHiddenByDefault: true),
@@ -238,6 +241,8 @@ class SurveyResponsesTable
         }
 
         return array_merge($columns, [
+            Column::make('dynamic_answers')->heading('All answers')
+                ->getStateUsing(fn (SurveyResponse $record) => collect($record->answerEntries())->map(fn ($entry) => $entry['label'].': '.$entry['value'])->implode("\n")),
             Column::make('utm_source')->heading('UTM Source'),
             Column::make('utm_medium')->heading('UTM Medium'),
             Column::make('utm_campaign')->heading('UTM Campaign'),

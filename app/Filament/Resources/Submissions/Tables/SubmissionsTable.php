@@ -8,14 +8,13 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ViewAction;
-use Filament\Schemas\Components\Grid;
+use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Table;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
-use Filament\Forms\Components\Select;
+use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
 class SubmissionsTable
@@ -82,7 +81,7 @@ class SubmissionsTable
                         Select::make('webinar_id')
                             ->label('Webinar')
                             ->options(fn (Get $get): array => Webinar::query()->where('client_id', $get('client_id'))->pluck('title', 'id')->all())
-                            ->visible(fn (Get $get) => $get('client_id'))
+                            ->visible(fn (Get $get) => $get('client_id')),
                     ])->query(function (Builder $query, array $data): Builder {
                         return $query
                             ->when(
@@ -100,7 +99,7 @@ class SubmissionsTable
                 \pxlrbt\FilamentExcel\Actions\Tables\ExportAction::make()
                     ->exports([
                         \pxlrbt\FilamentExcel\Exports\ExcelExport::make()
-                            ->withColumns(fn ($livewire) => static::getExcelColumns($livewire))
+                            ->withColumns(fn ($livewire) => static::getExcelColumns($livewire)),
                     ]),
             ])
             ->recordActions([
@@ -115,7 +114,7 @@ class SubmissionsTable
                     \pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction::make()
                         ->exports([
                             \pxlrbt\FilamentExcel\Exports\ExcelExport::make()
-                                ->withColumns(fn ($livewire) => static::getExcelColumns($livewire))
+                                ->withColumns(fn ($livewire) => static::getExcelColumns($livewire)),
                         ]),
                 ]),
             ]);
@@ -148,7 +147,8 @@ class SubmissionsTable
 
         foreach (static::getDynamicFields($webinarId) as $field) {
             $columns[] = \pxlrbt\FilamentExcel\Columns\Column::make("data.{$field['name']}")
-                ->heading($field['label'] ?? \Illuminate\Support\Str::headline($field['name']));
+                ->heading($field['label'] ?? \Illuminate\Support\Str::headline($field['name']))
+                ->formatStateUsing(fn ($state) => \App\Models\SurveyResponse::displayAnswer($state));
         }
 
         return array_merge($columns, [
@@ -181,14 +181,14 @@ class SubmissionsTable
         $webinarId = $filters['submitted']['webinar_id'] ?? null;
 
         // Si no hay webinar seleccionado, mostrar todas las columnas
-        if (!$webinarId) {
+        if (! $webinarId) {
             return true;
         }
 
         // Obtener el webinar seleccionado
         $webinar = Webinar::find($webinarId);
 
-        if (!$webinar || !$webinar->form_schema) {
+        if (! $webinar || ! $webinar->form_schema) {
             return false;
         }
 

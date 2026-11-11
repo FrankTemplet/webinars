@@ -1,12 +1,3 @@
-{{--
-    Vista previa de la página pública dentro del panel.
-
-    El iframe se renderiza a 1440px y se escala al ancho disponible, para que
-    se vea la versión de escritorio y no la responsiva comprimida.
-
-    Con $live, además, el formulario manda su estado por postMessage: así la
-    vista previa muestra lo que llevas escrito aunque no esté guardado.
---}}
 @php($live = $live ?? false)
 <div
     x-data="{
@@ -16,13 +7,22 @@
         width: 1440,
         live: false,
 
+        fit() {
+            this.scale = Math.min(1, (this.$refs.frame.clientWidth || this.width) / this.width);
+        },
+
+        device(width) {
+            this.width = width;
+            this.$nextTick(() => this.fit());
+        },
+
         init() {
             this.live = this.$el.dataset.live === '1';
 
             this.$nextTick(() => {
                 const frame = this.$refs.frame;
 
-                const fit = () => this.scale = (frame.clientWidth || this.width) / this.width;
+                const fit = () => this.fit();
                 fit();
                 new ResizeObserver(fit).observe(frame);
 
@@ -64,18 +64,23 @@
 
             this.$refs.iframe?.contentWindow?.postMessage({
                 type: 'templet:preview:state',
-                state: JSON.parse(JSON.stringify(this.$wire.data ?? {})),
+                state: { ...JSON.parse(JSON.stringify(this.$wire.data ?? {})), ...JSON.parse(this.$el.dataset.images) },
             }, window.location.origin);
         },
     }"
     data-src="{{ $url }}"
     data-live="{{ $live ? '1' : '0' }}"
+    data-images="{{ json_encode($images ?? []) }}"
     class="space-y-3"
 >
+    <div class="flex gap-4 text-sm">
+        <button type="button" x-on:click="device(1440)" x-bind:aria-pressed="width === 1440">Escritorio</button>
+        <button type="button" x-on:click="device(390)" x-bind:aria-pressed="width === 390">Mobile</button>
+    </div>
     <div
         x-ref="frame"
-        class="relative w-full overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700"
-        style="aspect-ratio: 1440 / 900;"
+        class="relative mx-auto w-full overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700"
+        x-bind:style="`max-width: ${width}px; height: ${900 * scale}px;`"
     >
         <iframe
             x-ref="iframe"
@@ -94,7 +99,7 @@
 
     <div class="flex items-center justify-between gap-4 text-sm text-gray-500 dark:text-gray-400">
         <span>
-            Desktop view at 1440px.
+            <span x-text="width === 390 ? 'Mobile · 390px' : 'Escritorio · 1440px'"></span>
             @if ($live)
                 Includes your unsaved changes.
             @endif

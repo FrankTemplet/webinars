@@ -48,7 +48,7 @@ class Survey extends Model
 
     protected $fillable = [
         'client_id', 'webinar_id', 'title', 'slug', 'intro',
-        'hero_image', 'header_logo', 'accent_color', 'accent_text_color', 'meta_title', 'meta_description',
+        'hero_image', 'mobile_hero_image', 'question_schema', 'contact_schema', 'header_logo', 'accent_color', 'accent_text_color', 'meta_title', 'meta_description',
         'background_color', 'button_radius', 'field_radius', 'custom_css',
         'q1_label', 'q2_label', 'q3_label', 'q3_options', 'q4_label', 'yes_label', 'no_label', 'q5_label',
         'guests_count', 'contact_enabled', 'contact_title', 'contact_description', 'submit_label',
@@ -57,6 +57,8 @@ class Survey extends Model
     ];
 
     protected $casts = [
+        'question_schema' => 'array',
+        'contact_schema' => 'array',
         'q3_options' => 'array',
         'extra_questions' => 'array',
         'guests_count' => 'integer',
@@ -79,6 +81,16 @@ class Survey extends Model
         'checkbox' => 'Checkbox',
         'rating' => 'Star rating (1-5)',
     ];
+
+    public function questionFields(): array
+    {
+        return $this->question_schema ?? \App\Support\SurveyFields::legacyQuestions($this);
+    }
+
+    public function contactFields(): array
+    {
+        return $this->contact_schema ?? \App\Support\SurveyFields::defaultContact();
+    }
 
     protected static function booted(): void
     {
@@ -193,6 +205,9 @@ class Survey extends Model
             // `title` es el nombre interno del panel: no se expone a la página.
             'intro' => $this->intro,
             'hero_image' => $this->hero_image,
+            'mobile_hero_image' => $this->mobile_hero_image,
+            'question_schema' => $this->questionFields(),
+            'contact_schema' => $this->contactFields(),
             'header_logo' => $this->header_logo,
             'theme' => $this->theme($forEditor),
             'meta_title' => $this->meta_title,

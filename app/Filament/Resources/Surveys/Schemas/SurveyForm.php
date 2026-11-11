@@ -6,10 +6,8 @@ use App\Filament\Schemas\ThemeSection;
 use App\Models\Survey;
 use App\Models\Webinar;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
@@ -74,6 +72,10 @@ class SurveyForm
                     ->disk('public')
                     ->directory('surveys/heroes')
                     ->columnSpanFull(),
+                FileUpload::make('mobile_hero_image')
+                    ->label('Mobile Image')
+                    ->helperText('Optional. Uses the main image when empty.')
+                    ->image()->disk('public')->directory('surveys/heroes')->columnSpanFull(),
                 FileUpload::make('header_logo')
                     ->label('Header Logo')
                     ->image()
@@ -83,57 +85,16 @@ class SurveyForm
 
                 ThemeSection::forPage(),
 
-                Section::make('Template Questions')
-                    ->description('These five are always asked and cannot be removed — only their wording is editable. To ask more, use Additional Questions below.')
+                Section::make('Questions')
                     ->schema([
-                        TextInput::make('q1_label')
-                            ->label('1. Experience (1 to 5 star rating)')
-                            ->placeholder(Survey::DEFAULT_QUESTIONS['q1_label'])
-                            ->maxLength(255)
-                            ->columnSpanFull(),
-                        TextInput::make('q2_label')
-                            ->label('2. Use case or challenges (free text)')
-                            ->placeholder(Survey::DEFAULT_QUESTIONS['q2_label'])
-                            ->maxLength(255)
-                            ->columnSpanFull(),
-                        TextInput::make('q3_label')
-                            ->label('3. Current stage (single choice)')
-                            ->placeholder(Survey::DEFAULT_QUESTIONS['q3_label'])
-                            ->maxLength(255)
-                            ->columnSpanFull(),
-                        TagsInput::make('q3_options')
-                            ->label('Stage Options')
-                            ->helperText('Leave empty to use the four default stages.')
-                            ->placeholder('Add option')
-                            ->columnSpanFull(),
-                        TextInput::make('q4_label')
-                            ->label('4. Wants a personalized review? (Yes / No)')
-                            ->placeholder(Survey::DEFAULT_QUESTIONS['q4_label'])
-                            ->maxLength(255)
-                            ->columnSpanFull(),
-                        TextInput::make('yes_label')
-                            ->label('4. "Yes" option')
-                            ->placeholder(Survey::DEFAULT_COPY['yes_label'])
-                            ->maxLength(60),
-                        TextInput::make('no_label')
-                            ->label('4. "No" option')
-                            ->placeholder(Survey::DEFAULT_COPY['no_label'])
-                            ->maxLength(60),
-                        TextInput::make('q5_label')
-                            ->label('5. Suggested guests')
-                            ->placeholder(Survey::DEFAULT_QUESTIONS['q5_label'])
-                            ->maxLength(255)
-                            ->columnSpanFull(),
-                        TextInput::make('guests_count')
-                            ->label('Guest Rows')
-                            ->helperText('How many guests a respondent can suggest. 0 hides the question.')
-                            ->numeric()
-                            ->minValue(0)
-                            ->maxValue(10)
-                            ->default(3),
-                    ])
-                    ->columnSpanFull()
-                    ->collapsible(),
+                        \App\Filament\Schemas\SurveyFieldSchema::make('question_schema')
+                            ->default(fn () => \App\Support\SurveyFields::legacyQuestions(new Survey(['guests_count' => 3])))
+                            ->afterStateHydrated(function ($component, $state, ?Survey $record) {
+                                if ($state === null && $record) {
+                                    $component->state($record->questionFields());
+                                }
+                            }),
+                    ])->columnSpanFull(),
 
                 Section::make('Contact Block & Button')
                     ->description('The contact fields shown above the questions, and the submit button. Leave any text empty to use the default.')
@@ -154,67 +115,17 @@ class SurveyForm
                             ->maxLength(255)
                             ->visible(fn (Get $get) => (bool) $get('contact_enabled'))
                             ->columnSpanFull(),
+                        \App\Filament\Schemas\SurveyFieldSchema::make('contact_schema', contact: true)
+                            ->default(\App\Support\SurveyFields::defaultContact())
+                            ->afterStateHydrated(function ($component, $state, ?Survey $record) {
+                                if ($state === null && $record) {
+                                    $component->state($record->contactFields());
+                                }
+                            }),
                         TextInput::make('submit_label')
                             ->label('Submit button')
                             ->placeholder(Survey::DEFAULT_COPY['submit_label'])
                             ->maxLength(60),
-                    ])
-                    ->columnSpanFull()
-                    ->collapsible(),
-
-                Section::make('Additional Questions')
-                    ->description('Your own questions, asked after the template ones in this order.')
-                    ->schema([
-                        Repeater::make('extra_questions')
-                            ->hiddenLabel()
-                            ->schema([
-                                Select::make('type')
-                                    ->label('Type')
-                                    ->options(Survey::EXTRA_QUESTION_TYPES)
-                                    ->default('text')
-                                    ->required()
-                                    ->live(),
-                                TextInput::make('label')
-                                    ->label('Question')
-                                    ->required()
-                                    ->live(onBlur: true)
-                                    ->afterStateUpdated(function (string $operation, $state, Get $get, Set $set) {
-                                        if (blank($get('name'))) {
-                                            $set('name', Str::slug($state, '_'));
-                                        }
-                                    })
-                                    ->columnSpanFull(),
-                                TextInput::make('name')
-                                    ->label('Field Name')
-                                    ->required()
-                                    ->helperText('Key used to store the answer (e.g. recommend_score). Changing it hides previous answers.')
-                                    ->rules(['regex:/^[a-z][a-z0-9_]*$/'])
-                                    ->validationMessages([
-                                        'regex' => 'Use lowercase letters, numbers and underscores, starting with a letter.',
-                                    ]),
-                                Toggle::make('required')
-                                    ->label('Required')
-                                    ->default(false),
-                                TagsInput::make('options')
-                                    ->label('Options')
-                                    ->visible(fn (Get $get) => in_array($get('type'), ['select', 'radio']))
-                                    ->required(fn (Get $get) => in_array($get('type'), ['select', 'radio']))
-                                    ->helperText('At least two options.')
-                                    ->rules([
-                                        fn (Get $get) => function (string $attribute, $value, \Closure $fail) use ($get) {
-                                            if (in_array($get('type'), ['select', 'radio'], true) && (! is_array($value) || count($value) < 2)) {
-                                                $fail('Add at least 2 options.');
-                                            }
-                                        },
-                                    ])
-                                    ->columnSpanFull(),
-                            ])
-                            ->itemLabel(fn (array $state): ?string => $state['label'] ?? null)
-                            ->defaultItems(0)
-                            ->addActionLabel('Add question')
-                            ->collapsible()
-                            ->collapsed()
-                            ->columnSpanFull(),
                     ])
                     ->columnSpanFull()
                     ->collapsible(),

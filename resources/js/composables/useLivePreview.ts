@@ -69,7 +69,19 @@ export function useLivePreview(getTheme: () => Theme, enabled: boolean) {
 
         const value = draft.value[key];
 
-        return filled(value) || typeof value === 'number' ? (value as T) : fallback;
+        return value === undefined ? fallback : (value as T);
+    };
+
+    const imageUrl = (key: string, fallback?: string): string => {
+        const raw =
+            draft.value && key in draft.value ? draft.value[key] : fallback;
+        const value = typeof raw === 'string' ? raw : toList<unknown>(raw)[0];
+        if (typeof value !== 'string' || !value) return '';
+        return value.startsWith('https://') ||
+            value.startsWith('http://') ||
+            value.startsWith('/')
+            ? value
+            : `/storage/${value}`;
     };
 
     const vars = computed<Record<string, string>>(() => {
@@ -94,10 +106,12 @@ export function useLivePreview(getTheme: () => Theme, enabled: boolean) {
             const value = draft.value[column];
             if (value === null || value === undefined || value === '') continue;
 
-            resolved[token] = `${Math.max(0, parseInt(String(value), 10) || 0)}px`;
+            resolved[token] =
+                `${Math.max(0, parseInt(String(value), 10) || 0)}px`;
         }
 
-        const font = (draft.value.font_family as string) || theme.editor.inherited_font;
+        const font =
+            (draft.value.font_family as string) || theme.editor.inherited_font;
         if (filled(font) && theme.editor.fonts[font]) {
             resolved['--font'] = `'${font}', sans-serif`;
         }
@@ -112,11 +126,12 @@ export function useLivePreview(getTheme: () => Theme, enabled: boolean) {
             return theme.font_url ?? null;
         }
 
-        const font = (draft.value.font_family as string) || theme.editor.inherited_font;
+        const font =
+            (draft.value.font_family as string) || theme.editor.inherited_font;
 
         return filled(font) && theme.editor.fonts[font]
             ? theme.editor.font_base_url + theme.editor.fonts[font]
-            : theme.font_url ?? null;
+            : (theme.font_url ?? null);
     });
 
     const customCss = computed<string>(() => {
@@ -152,7 +167,10 @@ export function useLivePreview(getTheme: () => Theme, enabled: boolean) {
 
         // El panel espera este aviso para mandar el primer estado: el iframe
         // puede tardar más que el formulario en montarse.
-        window.parent?.postMessage({ type: MESSAGE_READY }, window.location.origin);
+        window.parent?.postMessage(
+            { type: MESSAGE_READY },
+            window.location.origin,
+        );
     });
 
     onBeforeUnmount(() => {
@@ -166,5 +184,5 @@ export function useLivePreview(getTheme: () => Theme, enabled: boolean) {
         if (styleTag) styleTag.textContent = css;
     });
 
-    return { draft, pick, vars, fontUrl, customCss };
+    return { draft, pick, imageUrl, vars, fontUrl, customCss };
 }

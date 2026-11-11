@@ -54,6 +54,20 @@ class FormPreviewAction
             : null;
     }
 
+    private static function imageUrls(array $data): array
+    {
+        $images = [];
+        foreach (['hero_image', 'mobile_hero_image', 'header_logo', 'favicon', 'logo'] as $key) {
+            foreach ((array) ($data[$key] ?? []) as $value) {
+                if ($value instanceof \Livewire\Features\SupportFileUploads\TemporaryUploadedFile) {
+                    $images[$key] = $value->temporaryUrl();
+                }
+            }
+        }
+
+        return $images;
+    }
+
     private static function make(\Closure $url): Action
     {
         return Action::make('preview')
@@ -63,9 +77,10 @@ class FormPreviewAction
             ->modalHeading('Preview')
             ->modalDescription('Includes the changes you have not saved yet.')
             ->modalWidth(Width::SixExtraLarge)
-            ->modalContent(fn (Action $action) => view('filament.page-preview', [
+            ->modalContent(fn (Action $action, $livewire) => view('filament.page-preview', [
                 'url' => $action->evaluate($url),
                 'live' => true,
+                'images' => static::imageUrls($livewire->data ?? []),
             ]))
             ->modalSubmitAction(false)
             ->modalCancelActionLabel('Close');

@@ -73,6 +73,12 @@ class SurveyController extends Controller
             return back()->withErrors(['survey' => 'Esta encuesta ya no acepta respuestas.']);
         }
 
+        if ($survey->question_schema !== null || $survey->contact_schema !== null || $request->has('answers')) {
+            app(\App\Services\SurveySubmission::class)->store($request, $survey);
+
+            return back()->with('success', 'Gracias! Tu respuesta fue enviada correctamente.');
+        }
+
         // Las cinco preguntas de la plantilla son fijas; el bloque de contacto
         // y las preguntas adicionales dependen de la configuración.
         $rules = [

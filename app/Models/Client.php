@@ -14,7 +14,7 @@ class Client extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'name', 'slug', 'logo', 'footer_text', 'internal_email_domains',
+        'name', 'slug', 'logo', 'favicon', 'footer_text', 'internal_email_domains',
         'meta_ad_account_id', 'meta_access_token',
         'font_family', 'accent_color', 'accent_text_color', 'heading_color',
         'subtitle_color', 'text_color', 'background_color',
@@ -73,6 +73,7 @@ class Client extends Model
             'slug' => $this->slug,
             'name' => $this->name,
             'logo' => $this->logo,
+            'favicon' => $this->favicon,
             'footer' => $this->footer,
             'social_media' => $this->socialMedia
                 ->map(fn (SocialMediaLink $link) => [
