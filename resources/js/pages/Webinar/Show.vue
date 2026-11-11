@@ -353,24 +353,26 @@ onMounted(() => {
 
                     <!-- Right Column: Hero Image -->
                     <div
-                        class="relative order-1 flex min-h-[50vh] w-full justify-end p-0 md:order-2 md:min-h-screen md:w-7/12"
+                        class="relative order-1 w-full p-0 md:order-2 md:w-7/12"
                     >
-                        <div
-                            class="webinar-hero absolute inset-0 h-full w-full bg-cover bg-center bg-no-repeat"
-                            :style="{
-                                '--hero-image': view.hero
-                                    ? `url(${view.hero})`
-                                    : 'none',
-                                '--mobile-hero-image': view.mobile
-                                    ? `url(${view.mobile})`
-                                    : undefined,
-                            }"
+                        <picture
                             v-if="view.hero || view.mobile"
-                        ></div>
-                        <!-- Fallback gray background if no image -->
+                            class="block w-full"
+                        >
+                            <source
+                                v-if="view.mobile"
+                                media="(max-width: 767px)"
+                                :srcset="view.mobile"
+                            />
+                            <img
+                                :src="view.hero || view.mobile"
+                                :alt="view.title"
+                                class="webinar-hero block h-auto w-full"
+                            />
+                        </picture>
                         <div
                             v-else
-                            class="absolute inset-0 h-full w-full bg-gray-200"
+                            class="min-h-[50vh] w-full bg-gray-200 md:min-h-screen"
                         ></div>
                     </div>
                 </div>
@@ -380,14 +382,6 @@ onMounted(() => {
 </template>
 
 <style>
-.webinar-hero {
-    background-image: var(--hero-image);
-}
-@media (max-width: 767px) {
-    .webinar-hero {
-        background-image: var(--mobile-hero-image, var(--hero-image));
-    }
-}
 /* Los tokens (--font, --accent, --heading, --subtitle, --text, --bg y los
    radios) los inyecta el servidor en el div raíz desde la configuración del
    webinar. Lo que antes era un bloque fijo para una sola landing ahora sale
