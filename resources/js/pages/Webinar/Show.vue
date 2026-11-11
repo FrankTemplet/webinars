@@ -350,14 +350,7 @@ onMounted(() => {
                     </div>
 
                     <!-- Right Column: Hero Image -->
-                    <div
-                        class="hero-column"
-                        :style="{
-                            '--hero-image': view.hero
-                                ? `url(${view.hero})`
-                                : undefined,
-                        }"
-                    >
+                    <div class="hero-column">
                         <picture
                             v-if="view.hero || view.mobile"
                             class="hero-picture block w-full"
@@ -370,7 +363,7 @@ onMounted(() => {
                             <img
                                 :src="view.hero || view.mobile"
                                 :alt="view.title"
-                                class="webinar-hero block h-auto w-full"
+                                class="webinar-hero block w-full"
                             />
                         </picture>
                         <div
@@ -424,10 +417,7 @@ onMounted(() => {
 }
 .hero-column {
     grid-area: hero;
-    position: relative;
     min-width: 0;
-    /* clip y no hidden: hidden rompe el sticky de la imagen. */
-    overflow: clip;
     background-color: var(--bg);
 }
 @media (min-width: 1024px) {
@@ -442,23 +432,13 @@ onMounted(() => {
         max-width: 35rem;
         min-height: calc(100svh - 3rem);
     }
-    /* La imagen se muestra completa; el espacio que sobra cuando el
-       formulario es más alto se rellena con la misma imagen difuminada. */
-    .hero-column::before {
-        content: '';
-        position: absolute;
-        inset: -3rem;
-        background: var(--hero-image, none) center / cover no-repeat;
-        filter: blur(40px);
-    }
-    .hero-picture {
-        position: sticky;
-        top: 0;
-        z-index: 1;
+    /* La imagen ocupa toda la columna y crece con el formulario. */
+    .hero-picture,
+    .webinar-hero {
+        height: 100%;
     }
     .webinar-hero {
-        max-height: 100svh;
-        object-fit: contain;
+        object-fit: cover;
         object-position: center top;
     }
     .hero-placeholder {
