@@ -3,6 +3,7 @@ import type { GuestAnswer, SurveyAnswer, SurveyField } from '@/types/survey';
 const props = defineProps<{
     field: SurveyField;
     id: string;
+    placeholder?: string;
     errors: Record<string, string | undefined>;
 }>();
 const model = defineModel<SurveyAnswer>({ required: true });
@@ -25,6 +26,7 @@ const error = (suffix = '') => props.errors[props.id + suffix];
             v-model="model"
             :type="field.type"
             :aria-label="field.label"
+            :placeholder="placeholder"
             :required="field.required"
             :aria-invalid="!!error()"
             class="form-control"
@@ -34,6 +36,7 @@ const error = (suffix = '') => props.errors[props.id + suffix];
             :id="id"
             v-model="model as string"
             :aria-label="field.label"
+            :placeholder="placeholder"
             :required="field.required"
             class="form-control"
             rows="3"
@@ -46,7 +49,9 @@ const error = (suffix = '') => props.errors[props.id + suffix];
             :required="field.required"
             class="form-control"
         >
-            <option value="" disabled>Selecciona una opción</option>
+            <option value="" disabled>
+                {{ placeholder || 'Selecciona una opción' }}
+            </option>
             <option
                 v-for="option in field.options"
                 :key="option"
@@ -62,7 +67,9 @@ const error = (suffix = '') => props.errors[props.id + suffix];
                 )
             "
             class="choice-group"
-            :class="{ 'choice-group--rating': field.type === 'rating' }"
+            :class="{
+                'choice-group--multiple': field.type === 'multiselect',
+            }"
         >
             <legend class="visually-hidden">{{ field.label }}</legend>
             <template v-if="field.type === 'boolean'">
@@ -113,7 +120,6 @@ const error = (suffix = '') => props.errors[props.id + suffix];
                     v-for="option in field.options"
                     :key="option"
                     class="choice"
-                    :class="{ 'choice-button': field.type === 'multiselect' }"
                 >
                     <input
                         v-model="model"
@@ -146,9 +152,10 @@ const error = (suffix = '') => props.errors[props.id + suffix];
                     }"
                     :key="key"
                 >
-                    <span>{{ label }}</span>
+                    <span class="visually-hidden">{{ label }}</span>
                     <input
                         :value="guest[key]"
+                        :placeholder="label"
                         :type="key === 'email' ? 'email' : 'text'"
                         :required="field.required && key !== 'topics'"
                         class="form-control"
@@ -184,16 +191,9 @@ const error = (suffix = '') => props.errors[props.id + suffix];
     padding: 0;
     margin: 0;
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem 1rem;
-}
-.choice-group--rating {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
-}
-.choice-group--rating .choice {
-    min-height: 24px;
 }
 .rating-stars {
     display: inline-flex;
@@ -212,24 +212,23 @@ const error = (suffix = '') => props.errors[props.id + suffix];
     display: flex;
     gap: 0.5rem;
     align-items: center;
-    min-height: 44px;
+    min-height: 24px;
     cursor: pointer;
 }
 .choice input {
     accent-color: var(--accent);
 }
-.choice-button {
-    border: 1px solid var(--accent);
-    border-radius: var(--radius-field);
-    padding: 0.5rem 0.75rem;
+.choice-group--multiple {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
 }
-.choice-button:has(input:checked) {
-    background: var(--accent);
-    color: var(--accent-text);
+.choice-group--multiple .choice {
+    min-height: auto;
+    white-space: nowrap;
 }
-.choice-button:focus-within {
-    outline: 2px solid var(--accent);
-    outline-offset: 3px;
+.choice-group--multiple input {
+    flex-shrink: 0;
 }
 .guest-row {
     display: grid;

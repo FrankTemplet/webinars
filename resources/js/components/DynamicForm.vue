@@ -321,10 +321,7 @@ const submit = (): void => {
                             v-for="option in field.options"
                             :key="option"
                             :for="`${field.name}_${option}`"
-                            class="flex min-h-[44px] items-center"
-                            :class="{
-                                'multiple-choice': field.type === 'multiselect',
-                            }"
+                            class="flex items-center whitespace-nowrap"
                         >
                             <input
                                 :id="`${field.name}_${option}`"
@@ -339,7 +336,7 @@ const submit = (): void => {
                                 :required="
                                     field.type === 'radio' && field.required
                                 "
-                                class="form-check-input h-4 w-4 cursor-pointer"
+                                class="form-check-input h-4 w-4 shrink-0 cursor-pointer"
                             />
                             <span class="ml-2 block cursor-pointer text-sm">
                                 {{ option }}
@@ -449,19 +446,6 @@ const submit = (): void => {
 </template>
 
 <style scoped>
-.multiple-choice {
-    border: 1px solid var(--accent);
-    border-radius: var(--radius-field);
-    padding: 0.5rem 0.75rem;
-}
-.multiple-choice:has(input:checked) {
-    background: var(--accent);
-    color: var(--accent-text);
-}
-.multiple-choice:focus-within {
-    outline: 2px solid var(--accent);
-    outline-offset: 3px;
-}
 /* Los colores y radios vienen de los tokens que la landing define en su div
    raíz (--accent, --text, --heading, --radius-field, --radius-button), con
    los valores originales del formulario como respaldo. */

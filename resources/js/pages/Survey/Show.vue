@@ -256,17 +256,19 @@ const submit = (): void => {
                                 :key="field.name"
                                 class="field"
                             >
-                                <label :for="`contact.${field.name}`"
-                                    >{{ field.label
-                                    }}<span
-                                        v-if="field.required"
-                                        class="required"
-                                        >*</span
-                                    ></label
+                                <p
+                                    v-if="
+                                        ['radio', 'multiselect'].includes(
+                                            field.type,
+                                        )
+                                    "
                                 >
+                                    {{ field.label }}
+                                </p>
                                 <SurveyFieldInput
                                     v-model="form.contact[field.name]"
                                     :field="field"
+                                    :placeholder="field.label"
                                     :id="`contact.${field.name}`"
                                     :errors="errors"
                                 />
