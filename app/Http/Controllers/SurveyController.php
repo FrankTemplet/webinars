@@ -59,7 +59,7 @@ class SurveyController extends Controller
         [$client, $survey] = $this->resolveClientAndSurvey($request, $clientSlug, $surveySlug);
 
         return Inertia::render('Survey/Show', [
-            'client' => $client->toPublicArray(),
+            'client' => $client->toPublicArray($survey->footer_text),
             'survey' => $survey->toPublicArray(),
             'submitUrl' => $this->surveyRoute($request, 'survey.store', $client, $survey),
         ])->withViewData(['custom_css' => $survey->resolvedCustomCss()]);

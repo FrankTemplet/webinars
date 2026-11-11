@@ -23,7 +23,7 @@ class PagePreviewController extends Controller
         $webinar->setRelation('client', $client);
 
         return Inertia::render('Webinar/Show', [
-            'client' => $client->toPublicArray(),
+            'client' => $client->toPublicArray($webinar->footer_text),
             'webinar' => $webinar->toPublicArray(forEditor: true),
             'submitUrl' => '',
             'preview' => true,
@@ -37,7 +37,7 @@ class PagePreviewController extends Controller
         $survey->setRelation('client', $client);
 
         return Inertia::render('Survey/Show', [
-            'client' => $client->toPublicArray(),
+            'client' => $client->toPublicArray($survey->footer_text),
             'survey' => $survey->toPublicArray(forEditor: true),
             'submitUrl' => '',
             'preview' => true,

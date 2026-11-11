@@ -45,25 +45,35 @@ class Client extends Model
      */
     protected function footer(): Attribute
     {
-        return Attribute::get(function (): ?string {
-            $text = trim((string) $this->footer_text);
+        return Attribute::get(fn (): ?string => $this->resolveFooter($this->footer_text));
+    }
 
-            if ($text === '') {
-                return null;
-            }
+    /**
+     * Sustituye {year} y {client} en un texto de pie de página; null si
+     * viene vacío.
+     */
+    public function resolveFooter(?string $text): ?string
+    {
+        $text = trim((string) $text);
 
-            return strtr($text, [
-                '{year}' => (string) now()->year,
-                '{client}' => (string) $this->name,
-            ]);
-        });
+        if ($text === '') {
+            return null;
+        }
+
+        return strtr($text, [
+            '{year}' => (string) now()->year,
+            '{client}' => (string) $this->name,
+        ]);
     }
 
     /**
      * Solo lo que necesitan las páginas públicas. El modelo completo trae
      * credenciales de Meta, así que nunca se serializa tal cual.
+     *
+     * `$footerOverride` es el pie propio del webinar o la encuesta; cuando
+     * viene vacío se usa el del cliente.
      */
-    public function toPublicArray(): array
+    public function toPublicArray(?string $footerOverride = null): array
     {
         if (! $this->relationLoaded('socialMedia')) {
             $this->load('socialMedia');
@@ -74,7 +84,7 @@ class Client extends Model
             'name' => $this->name,
             'logo' => $this->logo,
             'favicon' => $this->favicon,
-            'footer' => $this->footer,
+            'footer' => $this->resolveFooter($footerOverride) ?? $this->footer,
             'social_media' => $this->socialMedia
                 ->map(fn (SocialMediaLink $link) => [
                     'type' => $link->type,

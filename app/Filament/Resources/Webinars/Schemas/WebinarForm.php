@@ -140,6 +140,12 @@ class WebinarForm
                     ->disk('public')
                     ->directory('webinars/logos')
                     ->columnSpanFull(),
+                Textarea::make('footer_text')
+                    ->label('Footer')
+                    ->helperText('Optional. Overrides the client footer. Accepts {year} and {client}. Leave empty to use the client footer.')
+                    ->rows(2)
+                    ->maxLength(500)
+                    ->columnSpanFull(),
                 ThemeSection::forPage(),
 
                 Section::make('Tracking Scripts')

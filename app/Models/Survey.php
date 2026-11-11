@@ -53,7 +53,7 @@ class Survey extends Model
         'q1_label', 'q2_label', 'q3_label', 'q3_options', 'q4_label', 'yes_label', 'no_label', 'q5_label',
         'guests_count', 'contact_enabled', 'contact_title', 'contact_description', 'submit_label',
         'extra_questions', 'is_open', 'closed_message',
-        'thank_you_title', 'thank_you_message',
+        'thank_you_title', 'thank_you_message', 'footer_text',
     ];
 
     protected $casts = [

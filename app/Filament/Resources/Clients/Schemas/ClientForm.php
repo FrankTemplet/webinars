@@ -30,7 +30,7 @@ class ClientForm
                     ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp', 'image/x-icon', 'image/vnd.microsoft.icon']),
                 Textarea::make('footer_text')
                     ->label('Pie de página')
-                    ->helperText('Se usa en las landings de webinar, la página de gracias y las encuestas de este cliente. Acepta {year} y {client}. Si se deja vacío, cada página usa su texto por defecto.')
+                    ->helperText('Se usa en las landings de webinar, la página de gracias y las encuestas de este cliente. Acepta {year} y {client}. Cada webinar o encuesta puede sobrescribirlo con su propio pie. Si se deja vacío, cada página usa su texto por defecto.')
                     ->placeholder('Copyright © {year} - {client} | Todos los derechos reservados.')
                     ->rows(2)
                     ->maxLength(500)

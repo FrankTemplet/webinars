@@ -69,6 +69,51 @@ class ClientFooterTest extends TestCase
             ->assertInertia(fn ($page) => $page->where('client.footer', 'Pie propio de Escala 24x7'));
     }
 
+    public function test_webinar_footer_overrides_the_client_footer(): void
+    {
+        $client = $this->createClient(['footer_text' => 'Pie del cliente']);
+        $webinar = Webinar::create([
+            'client_id' => $client->id,
+            'title' => 'Test Webinar',
+            'slug' => 'test-webinar',
+            'footer_text' => 'Pie del webinar {year} {client}',
+        ]);
+
+        $this->get("/{$client->slug}/{$webinar->slug}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('client.footer', 'Pie del webinar '.now()->year.' Escala 24x7'));
+    }
+
+    public function test_survey_footer_overrides_the_client_footer(): void
+    {
+        $client = $this->createClient(['footer_text' => 'Pie del cliente']);
+        $survey = Survey::create([
+            'client_id' => $client->id,
+            'title' => 'Test Survey',
+            'slug' => 'test-survey',
+            'footer_text' => 'Pie de la encuesta',
+        ]);
+
+        $this->get("/{$client->slug}/surveys/{$survey->slug}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('client.footer', 'Pie de la encuesta'));
+    }
+
+    public function test_blank_page_footer_falls_back_to_the_client_footer(): void
+    {
+        $client = $this->createClient(['footer_text' => 'Pie del cliente']);
+        $survey = Survey::create([
+            'client_id' => $client->id,
+            'title' => 'Test Survey',
+            'slug' => 'test-survey',
+            'footer_text' => '   ',
+        ]);
+
+        $this->get("/{$client->slug}/surveys/{$survey->slug}")
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->where('client.footer', 'Pie del cliente'));
+    }
+
     public function test_footer_is_not_exposed_through_the_public_api(): void
     {
         $client = $this->createClient(['footer_text' => 'Pie interno']);

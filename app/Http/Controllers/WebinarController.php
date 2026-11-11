@@ -67,7 +67,7 @@ class WebinarController extends Controller
         [$client, $webinar] = $this->resolveClientAndWebinar($request, $clientSlug, $webinarSlug);
 
         return Inertia::render('Webinar/Show', [
-            'client' => $client->toPublicArray(),
+            'client' => $client->toPublicArray($webinar->footer_text),
             'webinar' => $webinar->toPublicArray(),
             'submitUrl' => $this->webinarRoute($request, 'webinar.store', $client, $webinar),
         ])->withViewData(['custom_css' => $webinar->resolvedCustomCss()]);
@@ -85,7 +85,7 @@ class WebinarController extends Controller
         }
 
         return Inertia::render('Webinar/ThankYou', [
-            'client' => $client->toPublicArray(),
+            'client' => $client->toPublicArray($webinar->footer_text),
             'webinar' => array_merge($webinar->only([
                 'slug', 'title', 'meta_title', 'meta_description', 'header_logo',
                 'thank_you_title', 'thank_you_message', 'thank_you_image',

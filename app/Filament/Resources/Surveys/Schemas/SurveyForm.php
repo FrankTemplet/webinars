@@ -8,6 +8,7 @@ use App\Models\Webinar;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Section;
@@ -82,6 +83,12 @@ class SurveyForm
                     ->image()
                     ->disk('public')
                     ->directory('surveys/logos')
+                    ->columnSpanFull(),
+                Textarea::make('footer_text')
+                    ->label('Footer')
+                    ->helperText('Optional. Overrides the client footer. Accepts {year} and {client}. Leave empty to use the client footer.')
+                    ->rows(2)
+                    ->maxLength(500)
                     ->columnSpanFull(),
 
                 ThemeSection::forPage(),

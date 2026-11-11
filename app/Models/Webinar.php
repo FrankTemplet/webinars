@@ -24,7 +24,7 @@ class Webinar extends Model
         'button_radius', 'field_radius', 'custom_css',
         'meta_campaign_id', 'campaign', 'ad_spend', 'last_ad_spend_sync_at',
         'thank_you_enabled', 'thank_you_title', 'thank_you_message', 'thank_you_image',
-        'thank_you_cta_text', 'thank_you_cta_url',
+        'thank_you_cta_text', 'thank_you_cta_url', 'footer_text',
     ];
 
     protected $casts = [
