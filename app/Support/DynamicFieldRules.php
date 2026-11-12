@@ -2,12 +2,15 @@
 
 namespace App\Support;
 
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class DynamicFieldRules
 {
     public static function forField(array $field, string $key): array
     {
+        // TrimStrings recorta lo que se envía; las opciones se comparan igual de recortadas.
+        $options = array_map(fn ($option) => Str::trim((string) $option), $field['options'] ?? []);
         $rules = [($field['required'] ?? false) ? 'required' : 'nullable'];
         $type = $field['type'];
         $rules[] = match ($type) {
@@ -30,15 +33,15 @@ class DynamicFieldRules
             $rules[] = 'max:5000';
         }
         if (in_array($type, ['select', 'radio'])) {
-            $rules[] = Rule::in($field['options'] ?? []);
+            $rules[] = Rule::in($options);
         }
         $result = [$key => $rules];
         if ($type === 'multiselect') {
-            $result[$key][] = 'max:'.count($field['options'] ?? []);
+            $result[$key][] = 'max:'.count($options);
             if ($field['required'] ?? false) {
                 $result[$key][] = 'min:1';
             }
-            $result[$key.'.*'] = ['string', 'distinct', Rule::in($field['options'] ?? [])];
+            $result[$key.'.*'] = ['string', 'distinct', Rule::in($options)];
         }
         if ($type === 'guests') {
             $result[$key][] = 'max:'.max(1, min(10, $field['guests_count'] ?? 3));

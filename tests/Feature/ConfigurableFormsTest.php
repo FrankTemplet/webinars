@@ -64,6 +64,14 @@ class ConfigurableFormsTest extends TestCase
         $this->assertSame(0, SurveyResponse::count());
     }
 
+    public function test_multiple_choice_accepts_options_saved_with_surrounding_spaces(): void
+    {
+        $this->survey(['question_schema' => [['name' => 'topics', 'label' => 'Topics', 'type' => 'multiselect', 'required' => true, 'options' => ['Cloud ', ' Security']]]]);
+        $this->post('/client/surveys/survey', ['answers' => ['topics' => ['Cloud ', ' Security']], 'contact' => ['company' => 'Acme']])
+            ->assertSessionHasNoErrors();
+        $this->assertSame(['topics' => ['Cloud', 'Security']], SurveyResponse::firstOrFail()->answers);
+    }
+
     public function test_contact_toggle_skips_required_fields_and_new_question_types_do_not_fill_old_columns(): void
     {
         $this->survey([
