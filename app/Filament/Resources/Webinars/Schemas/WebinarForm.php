@@ -39,7 +39,7 @@ class WebinarForm
                     ->helperText('Hide the title on the public landing page without deleting it.')
                     ->default(true),
                 TextInput::make('subtitle')
-                    ->maxLength(255),
+                    ->maxLength(265),
                 TextInput::make('slug')
                     ->required()
                     ->maxLength(255),
